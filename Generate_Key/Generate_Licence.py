@@ -19,7 +19,7 @@ def Frm_Generate_Licence(master, login_id):
         active_days = TxtActiveDays.get()
         
         if cust_name and cust_contact and hard_no and active_days:
-            msg = messagebox.askokcancel("Warning", "You can't edit once key is generated. Continue?")
+            msg = messagebox.askokcancel("Warning", "You can't edit once key is generated. Continue?", parent=frm_license)
             if msg:
                 key, valid_from, valid_till = Main_Function(hard_no, active_days)
                 if key:

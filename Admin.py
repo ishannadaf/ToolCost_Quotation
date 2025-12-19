@@ -35,15 +35,8 @@ def Main_Function():
             root_login.destroy()
             Frm_Master_Dashboard(1)
 
-        elif n1 != "" and n2 != "":
-            sql1 = f"SELECT id from login_master WHERE user_name = {DATABASE_SYN} and user_pass = {DATABASE_SYN}"
-            db_cursor.execute(sql1, (n1, n2))
-            data1 = db_cursor.fetchall()
-            if db_cursor.rowcount != 0:
-                root_login.destroy()
-                Dashboard(data1[0][0])
-            else:
-                messagebox.showerror("Error", "Invalid username or password...", parent=root_login)
+        else:
+            messagebox.showerror("Error", "Invalid username or password...", parent=root_login)
 
     root_login = Tk()
     root_login.geometry("600x400+400+200")

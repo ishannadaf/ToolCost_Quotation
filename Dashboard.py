@@ -241,10 +241,9 @@ def Dashboard(login_id):
     # Place the top_frame above the canvas (so it stays visible)
     top_frame.lift(canvas)
     top_frame.place(x=0, y=0, relwidth=1)
-
+   
     on_start()
     dash_screen.mainloop()
-
 
 # Example call for testing:
 # Dashboard(login_id=1)

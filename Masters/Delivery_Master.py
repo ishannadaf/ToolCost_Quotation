@@ -129,7 +129,7 @@ def Frm_Delivery_Master(master, login_id):
         if n1:
             sql1 = f"""
                 SELECT 
-                dmm.part_no,
+                qmd.part_no,
                 qmd.part_desc,
                 qmd.part_qty AS Total_Qty,
                 dmm.delivery_qty,
@@ -140,7 +140,7 @@ def Frm_Delivery_Master(master, login_id):
                     ) AS remaining_qty,
                 dmm.delivery_dt
             FROM quotation_master_details qmd
-            JOIN delivery_manage_master dmm
+            LEFT JOIN delivery_manage_master dmm
             ON dmm.quot_no = qmd.Quotation_Id
             AND dmm.part_no = qmd.part_no
             WHERE qmd.Quotation_Id = '{n1}'
@@ -152,7 +152,7 @@ def Frm_Delivery_Master(master, login_id):
             List_Total_TreeView_report.delete(*List_Total_TreeView_report.get_children())
             if data1:
                 for i in data1:
-                    List_Total_TreeView_report.insert("", "end", values=(str(i[0]), i[1], str(i[2]), str(i[3]), str(i[4]), str(i[5])))
+                    List_Total_TreeView_report.insert("", "end", values=(str(i[0]), i[1], str(i[2]), str(i[3]) if i[3] else '0', str(i[4]) if i[4] else '0', str(i[5]) if i[5] else 'N/A'))
             else:
                 messagebox.showinfo("Info", f"No data found for Quotation No. {n1}", parent=frm_delivery)
                 
@@ -169,7 +169,7 @@ def Frm_Delivery_Master(master, login_id):
                     ON dmm.part_no = qmd.part_no
                     AND dmm.quot_no = qmd.Quotation_Id
                     WHERE qmd.Quotation_Id = '{n1}'
-                    GROUP BY 
+                    GROUP BY
                         qmd.part_no,
                         qmd.part_desc,
                         qmd.part_qty
@@ -296,7 +296,7 @@ def Frm_Delivery_Master(master, login_id):
     LblQuot = Label(tab1, text='Quot No.', font=('Times New Roman', 16))
     LblQuot.place(x=265, y=70)
 
-    TxtQuot = Entry(tab1, width=12, font=('Times New Roman', 16))
+    TxtQuot = Entry(tab1, width=12, font=('Times New Roman', 16), justify='center')
     TxtQuot.place(x=365, y=70)
 
     BtnSearch = Button(tab1, text='Search',
@@ -389,7 +389,7 @@ def Frm_Delivery_Master(master, login_id):
     LblQuotReport = Label(tab2, text='Quot No.', font=('Times New Roman', 16))
     LblQuotReport.place(x=265, y=70)
 
-    TxtQuotReport = Entry(tab2, width=12, font=('Times New Roman', 16))
+    TxtQuotReport = Entry(tab2, width=12, font=('Times New Roman', 16), justify='center')
     TxtQuotReport.place(x=365, y=70)
 
     BtnSearchReport = Button(tab2, text='Search',

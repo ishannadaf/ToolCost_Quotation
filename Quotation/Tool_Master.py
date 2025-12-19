@@ -13,10 +13,8 @@ from Quotation.Quotation_Master_PDF import create_quotation_pdf
 import os
 import re
 import ast
-
 import tkinter
 class AutocompleteCombobox(ttk.Combobox):
-
     def set_completion_list(self, completion_list):
             """Use our completion list as our drop down selection menu, arrows move through menu."""
             self._completion_list = sorted(completion_list, key=str.lower) # Work with a sorted list
@@ -242,6 +240,49 @@ def Frm_Tool_Master(master, login_id):
                 TxtLength.delete(0, END)
                 TxtThickNess.delete(0, END)
                 TxtProfit.delete(0, END)
+                
+                val = TxtShape.get()
+                if val == "Rectangle":
+                    TxtWidth['state'] = 'normal'
+                    TxtLength['state'] = 'normal'
+                    TxtThickNess['state'] = 'normal'
+                    LblThickNess['text'] = 'Thickness'
+                    LblLength['text'] = 'Length'
+                if val == 'Hexagon':
+                    TxtWidth['state'] = 'disabled'
+                    TxtLength['state'] = 'normal'
+                    TxtThickNess['state'] = 'normal'
+                    LblThickNess['text'] = 'Flat'
+                if val == 'Circle':
+                    TxtWidth['state'] = 'disabled'
+                    TxtLength['state'] = 'normal'
+                    TxtThickNess['state'] = 'normal'
+                    LblThickNess['text'] = 'Diameter'
+                    TxtLength['text'] = 'Length'
+                if val == 'Fabrication':
+                    TxtWidth['state'] = 'disabled'
+                    TxtLength['state'] = 'normal'
+                    TxtThickNess['state'] = 'disabled'
+                    LblLength['text'] = 'Fab. Weight'
+                    
+                    LblUnitWeight.place(x=330, y=5)
+                    TxtUnitWeight.place(x=320, y=30)
+                    
+                    LblRMC.place(x=550, y=5)
+                    TxtRMC.place(x=540, y=30)
+                    
+                    LblWeld.place(x=50, y=5)
+                    TxtWeld.place(x=40, y=30)
+                    
+                    LblSRST.place(x=180, y=5)
+                    TxtSRST.place(x=170, y=30)
+                    
+                    TxtWeld.delete(0, END)
+                    TxtSRST.delete(0, END)
+                    
+                    TxtWeld.insert(0, thickness)
+                    TxtSRST.insert(0, width)
+                
                 try:
                     TxtWidth.insert(0, width)
                 except:
@@ -254,6 +295,7 @@ def Frm_Tool_Master(master, login_id):
                     TxtThickNess.insert(0, thickness)
                 except:
                     pass
+                    
                 TxtProfit.insert(0, str(profit_per))
                 TxtUnitWeight['text'] = str(unit_weight)
                 LblTotalToolCost['text'] = str(unit_price) + ' Rs.'
@@ -447,9 +489,9 @@ def Frm_Tool_Master(master, login_id):
                 "material" : TxtMaterial.get(),
                 "unit_measurement" : TxtUnit.get(),
                 "shape" : TxtShape.get(),
-                "width" : TxtWidth.get(),
+                "width" : TxtWidth.get() if TxtShape.get() != 'Fabrication' else TxtSRST.get(),
                 "length" : TxtLength.get(),
-                "thickness" : TxtThickNess.get(),
+                "thickness" : TxtThickNess.get() if TxtShape.get() != 'Fabrication' else TxtWeld.get(),
                 "unit_weight" : TxtUnitWeight['text'].split(' ')[0],
                 "unit_price" : unit_price,
                 "rmc" : TxtRMC["text"],
@@ -465,8 +507,10 @@ def Frm_Tool_Master(master, login_id):
             TxtWidth.delete(0, END)
             TxtLength.delete(0, END)
             TxtThickNess.delete(0, END)
-            LblTotalToolCost['text'] = ''
+            LblTotalToolCost['text'] = '0.0'
             ListMachiningCost['text'] = ''
+            TxtRMC['text'] = '0.0'
+            TxtUnitWeight['text'] = '0.0'
             ListMachiningCostTotal['text'] = 'Total Cost'
             if val == "Rectangle":
                 TxtWidth['state'] = 'normal'
@@ -490,7 +534,18 @@ def Frm_Tool_Master(master, login_id):
                 TxtLength['state'] = 'normal'
                 TxtThickNess['state'] = 'disabled'
                 LblLength['text'] = 'Fab. Weight'
-                #LblThickNess['text'] = 'SRSB'
+                
+                LblUnitWeight.place(x=330, y=5)
+                TxtUnitWeight.place(x=320, y=30)
+                
+                LblRMC.place(x=550, y=5)
+                TxtRMC.place(x=540, y=30)
+                
+                LblWeld.place(x=50, y=5)
+                TxtWeld.place(x=40, y=30)
+                
+                LblSRST.place(x=180, y=5)
+                TxtSRST.place(x=170, y=30)
 
         def Reset_Form():
             TxtNo.delete(0, END)
@@ -547,7 +602,7 @@ def Frm_Tool_Master(master, login_id):
         
         LblCust = Label(Frm1, text="Customer Name :", font=('Times New Roman', 14))
         LblCust.place(x=20, y=10)
-        TxtCustomer = AutocompleteCombobox(Frm1, width=30, font=('Times New Roman', 14))
+        TxtCustomer = Entry(Frm1, width=30, font=('Times New Roman', 14))
         TxtCustomer.place(x=160, y=10)
         
         LblProv = Label(Frm1, text="Provider :", font=('Times New Roman', 14))
@@ -618,6 +673,13 @@ def Frm_Tool_Master(master, login_id):
         TxtLength = Entry(Frm4, validate="key", validatecommand=vcmd, font=('Times New Roman', 16), width=16, justify='center')
         TxtLength.place(x=450, y=40)
         
+        LblWeld = Label(Frm5, text='Welding', font=('Times New Roman', 14))
+        TxtWeld = Entry(Frm5, width=8, font=('Times New Roman', 18), justify='center')
+        
+        LblSRST = Label(Frm5, text='SRST', font=('Times New Roman', 14))
+        TxtSRST = Entry(Frm5, width=8, font=('Times New Roman', 18), justify='center')
+        
+                
         LblUnitWeight = Label(Frm5, text='Unit Weight', font=('Times New Roman', 14))
         LblUnitWeight.place(x=150, y=5)
         TxtUnitWeight = Label(Frm5, text='0.00 Kgs', font=('Times New Roman', 18))
@@ -703,7 +765,7 @@ def Frm_Tool_Master(master, login_id):
                 volume = (3.141592 * (float(thickness)**2)/4 * float(length) * float(density_rate[0][0])/1000000000)
                 flag = True
             if shape == 'Fabrication':
-                volume = round((1.35 * float(length)), 6)
+                volume = round((float(length)), 6)
                 #TxtLength.delete(0, END)
                 #TxtLength.insert(0, str(volume))
                 flag = True
@@ -711,16 +773,30 @@ def Frm_Tool_Master(master, login_id):
                 unit_weight = round(volume, 6)
                 TxtUnitWeight['text'] = str(unit_weight) + '  Kgs'
                 if shape == 'Fabrication':
-                    TxtRMC['text'] = round((volume * float(density_rate[0][1])) + (4 * float(length)), 6)
+                    try:
+                        weld = float(TxtWeld.get())
+                        srst = float(TxtSRST.get())
+                    except:
+                        weld = 0
+                        srst = 0
+                    if weld and srst:
+                        TxtRMC['text'] = round((volume * float(density_rate[0][1])) + (weld * float(length)) + (srst * float(length)), 6)
                 else:
                     TxtRMC['text'] = round(volume * float(density_rate[0][1]), 6)
 
                 weight = float(TxtUnitWeight['text'].split(' ')[0])
                 scrab_cost = float(TxtScrabCost['text'].split(' ')[0])
+                scrab = TxtScrabPer.get()
+                if scrab_cost == 0.0:
+                    TxtScrabPer.delete(0, END)
+                    TxtScrabPer.insert(0, '0')
+                    scrab = 0
+                if scrab == 0:
+                    scrab = 1
                 scrab_amt = round(scrab_per * weight * scrab_cost, 2)
                 
                 TxtScrabTotal['text'] = str(scrab_amt) + ' Rs.'
-                
+
             else:
                 TxtUnitWeight['text'] = str(0.0) + '  Kgs'
                 volume = 0
@@ -743,13 +819,19 @@ def Frm_Tool_Master(master, login_id):
         
         def f111(evevnt):
             # profit = 
-            if TxtScrabPer.get() != '':
-                scrab_per = float(TxtScrabPer.get())
-                weight = float(TxtUnitWeight['text'].split(' ')[0])
-                scrab_cost = float(TxtScrabCost['text'].split(' ')[0])
-                scrab_amt = round(scrab_per * weight * scrab_cost/100, 2)
-                
-                TxtScrabTotal['text'] = str(scrab_amt) + ' Rs.'
+            scrab_cost = float(TxtScrabCost['text'].split(' ')[0])
+            scrab = TxtScrabPer.get()
+            if scrab_cost == 0.0:
+                TxtScrabPer.delete(0, END)
+                TxtScrabPer.insert(0, '0')
+                scrab = 0
+            if scrab == 0:
+                scrab = 1
+            scrab_per = float(scrab)
+            weight = float(TxtUnitWeight['text'].split(' ')[0])
+            scrab_amt = round(scrab_per * weight * scrab_cost/100, 2)
+            
+            TxtScrabTotal['text'] = str(scrab_amt) + ' Rs.'
         
         def f13(event):
             TxtWidth.focus()
@@ -757,7 +839,8 @@ def Frm_Tool_Master(master, login_id):
         TxtWidth.bind('<KeyRelease>', f1)
         TxtLength.bind('<KeyRelease>',f1)
         TxtThickNess.bind('<KeyRelease>',f1)
-        
+        TxtWeld.bind('<KeyRelease>',f1)
+        TxtSRST.bind('<KeyRelease>',f1)
         TxtThickNess.bind('<Return>',f13)
         TxtWidth.bind('<Return>', f11)
 
@@ -853,7 +936,6 @@ def Frm_Tool_Master(master, login_id):
         for selection in trv.selection():
             item = trv.item(selection)
         i1 = item["values"]
-        
         Frm_Quotation_Master(tool_master, i1, TxtCustomer1.get(), TxtProv.get(), login_id)
 
     def Get_Firm_Details():
@@ -918,7 +1000,6 @@ def Frm_Tool_Master(master, login_id):
                     messagebox.showinfo("Success",f"QUOTATION is generated successfully...", parent=tool_master)
                     create_quotation_pdf(sample, pdf_path, "QUOTATION")
                 elif no == 2:
-                    
                     messagebox.showinfo("Success",f"Invoice is generated successfully...", parent=tool_master)
                     date_tr = datetime.today().date()
                     sql_update = f"UPDATE quotation_master SET invoice_id = {DATABASE_SYN}, invoice_tr_date = {DATABASE_SYN}, invoice_generated = {DATABASE_SYN} WHERE quotation_id = {DATABASE_SYN} AND login_id = {DATABASE_SYN}"
@@ -966,7 +1047,7 @@ def Frm_Tool_Master(master, login_id):
             #     table_names = ['quotation_master_details_machining_details_u', 'quotation_master_details_u', 'quotation_master_u']
             flag2 = True
             if not flag:
-                msg1 = messagebox.askyesno("Warning", "All part's are not updated. Do you want to continue?.\nYou have to update the quotation fromm update tab.", parent=tool_master)
+                msg1 = messagebox.askyesno("Warning", "All part's are not updated. Do you want to continue?.\nYou have to update the quotation from UPDATE tab.", parent=tool_master)
                 if msg1:
                     flag2 = True
                 else:
@@ -983,18 +1064,40 @@ def Frm_Tool_Master(master, login_id):
                     part_qty = int(vals[3])
                     unit_price = round(float(vals[4]), 2)
                     total_price = round(float(vals[5]), 2)
-                    if len(vals)>6:
+                    if len(vals)>6 and ast.literal_eval(vals[6]):
                         str_json = ast.literal_eval(vals[6])
                         material = str_json["material"]
                         unit_measurement = str_json["unit_measurement"]
                         shape = str_json["shape"]
-                        width = float(str_json["width"])
-                        Length = float(str_json["length"])
-                        Thickness = float(str_json["thickness"])
-                        Rmc = float(str_json["rmc"])
-                        profit_per = var_percentage.get()
-                        Weight = float(str_json["unit_weight"])
-                        machining_lst = str_json["machining_lst"]
+                        try:
+                            width = float(str_json["width"])
+                        except:
+                            width = 0 
+                        try:
+                            Length = float(str_json["length"])
+                        except:
+                            Length = 0
+                        try:
+                            Thickness = float(str_json["thickness"])
+                        except:
+                            Thickness = 0
+                        try:
+                            Rmc = float(str_json["rmc"])
+                        except:
+                            Rmc = 0
+                        try:
+                            profit_per = var_percentage.get()
+                        except:
+                            profit_per = 0
+                        try:
+                            Weight = float(str_json["unit_weight"])
+                        except:
+                            Weight = 0
+                        try:
+                            machining_lst = str_json["machining_lst"]
+                        except:
+                            machining_lst = {}
+                        
                     else:
                         material = ''
                         unit_measurement = ''
@@ -1045,11 +1148,10 @@ def Frm_Tool_Master(master, login_id):
                 else:
                     reset_form_quot_unsaved_data()
                 BtnSave['state'] = 'disabled'    
-                
-    
+
     def only_int(new_value):
         return new_value.isdigit() or new_value == ""
-    
+
     def show_selected_record_update(event):
         for selection in trv_1History.selection():
             item = trv_1History.item(selection)
@@ -1069,7 +1171,6 @@ def Frm_Tool_Master(master, login_id):
         trv.delete(*trv.get_children())
         cnt1 = 1
         for quot_id, quot_details in data.items():
-            
             for part_id, part_details in quot_details.items():
                 machining_details = {
                     'material' : part_details['material'],
@@ -1105,7 +1206,7 @@ def Frm_Tool_Master(master, login_id):
             
             TxtProv['values'] = party_dict[TxtCustomer1.get()]
             TxtProv.current(0)
-            
+
     def Search_Records():
         trv_1History.delete(*trv_1History.get_children())
         name = TxtCustomerSHistory.get()
@@ -1144,7 +1245,7 @@ def Frm_Tool_Master(master, login_id):
                             "unit_price" : child[14],
                             "total_price" : child[15]
                             }
-                        
+
                         lst = {}
                         if data3 != []:
                             for item in data3:
@@ -1162,9 +1263,15 @@ def Frm_Tool_Master(master, login_id):
                 dt1 = i[2]
                 dt2 = i[3]
                 if dt1:
-                    dt1 = str(dt1.date())
+                    try:
+                        dt1 = str(dt1.date())
+                    except:
+                        pass
                 if dt2:
-                    dt2 = str(dt2.date())
+                    try:
+                        dt2 = str(dt2.date())
+                    except:
+                        pass
                 trv_1History.insert("", 'end', text=str(cnt1), values=(str(i[0]), str(i[4]), str(i[1]), dt1, dt2, all_items))
                 cnt1 += 1
                 
@@ -1253,7 +1360,7 @@ def Frm_Tool_Master(master, login_id):
     LblExcel.place(x=10, y=5)
     BtnExcel = Button(Frm2, text='Open Excel', font=('Times New Roman', 16), width=12, bg='green', fg='white', command=Open_File)
     BtnExcel.place(x=10, y=50)
-    
+
     scrolly=Scrollbar(tab1 , orient=VERTICAL)
     
     trv=ttk.Treeview(tab1 , columns=("no" , "part_no" , "part_desc", "qty", "unit_price", "total_price") , yscrollcommand=scrolly.set )#, xscrollcommand=scrollx.set
@@ -1325,8 +1432,16 @@ def Frm_Tool_Master(master, login_id):
     def f5(event):
         TxtNo.focus()
     
+    def f6(event):
+        cust = TxtCustomer1.get()
+        TxtProv['values'] = party_dict[cust]
+        TxtProv.current(0)
+        TxtProv.focus()
+    
     TxtCustomer1.bind("<<ComboboxSelected>>", f1)
-    TxtCustomer1.bind("<FocusOut>", f1)
+    TxtCustomer1.bind("<Return>", f1)
+    # TxtCustomer1.bind("<FocusOut>", f1)
+    # TxtProv.bind("<FocusIn>", f6)
     TxtProv.bind("<<ComboboxSelected>>", f5)
     TxtNo.bind('<Return>', f2)
     TxtPartDesc.bind('<Return>', f3)

@@ -258,7 +258,7 @@ def show_activation_screen(root, error_msg, var_hdd, var_sec, hwid_var,
            command=lambda: save_data(root, hwid_var, var_hdd,
                                      key1_var, key2_var, key3_var, key4_var)
            ).pack(pady=15)
-
+    
 def main():
     root = Tk()
     root.title("Checking License...")

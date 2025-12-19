@@ -2,18 +2,14 @@
 import sqlite3
 import mysql.connector
 from datetime import datetime
-# DATABASE_NAME = "MYSQL"
-DATABASE_SYN = "?"
+DATABASE_NAME = "MYSQL"
+DATABASE_SYN = "%s"
 
-# if DATABASE_NAME == "MYSQL":
-#     DATABASE_SYN = "%s"
-#     db_connection = mysql.connector.connect(host="localhost", user="root", password="omicron", auth_plugin='mysql_native_password')  
-#     db_cursor = db_connection.cursor(buffered=True)
-#     db_cursor.execute("use tool_management")
-# else:
-db_connection = sqlite3.connect(r"D:\\ToolCosting\\DB\\DB_Test.db")
-db_cursor = db_connection.cursor()
-# db_cursor.execute("use tool_management")
+
+db_connection = mysql.connector.connect(host="localhost", user="root", password="omicron", auth_plugin='mysql_native_password')  
+db_cursor = db_connection.cursor(buffered=True)
+db_cursor.execute("use tool_management")
+
 def Max_No(tb_name, col_name, cid):
     id_no = 0
     query = f"SELECT {col_name} FROM {tb_name} where login_id = {cid}"
