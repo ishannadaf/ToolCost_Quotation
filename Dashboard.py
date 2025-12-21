@@ -36,6 +36,9 @@ except Exception as e:
     print(e)
 
 def Dashboard(login_id):
+    def logout_app():
+        dash_screen.destroy()
+        #Main_Function()
     def download_excel():
         file_path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
@@ -191,7 +194,7 @@ def Dashboard(login_id):
         entries = [
             ("Tool Excel", lambda: download_excel()),# replace with real function if any  
             ("Reset Password", lambda: Frm_Reset_Password(dash_screen, login_id)),
-            ("Log out", lambda: dash_screen.quit()),
+            ("Log out", lambda: logout_app()),
         ]
         popup_menu_for(widget or help_btn, entries)
 

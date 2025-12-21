@@ -2,7 +2,8 @@ from tkinter import *
 import tkinter.ttk as ttk
 from Database.connection import *
 from tkinter import messagebox
-
+from openpyxl import Workbook
+import os
 def Frm_Delivery_Master(master, login_id):
     class QtyDialog(Toplevel):
         def __init__(self, parent, part_name, available_qty):
@@ -273,6 +274,37 @@ def Frm_Delivery_Master(master, login_id):
 
             List_Delivery_TreeView.delete(iid)
 
+    def Generate_Excel_Report():
+        flag = True
+        for child in List_Total_TreeView_report.get_children():
+            vals = List_Total_TreeView_report.item(child)["values"]
+            if not vals:
+                flag = False
+                break
+        
+                
+        if flag:
+            file_path = r'D:\\ToolCosting\\Support Documents\\Delivery_Report.xlsx'
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Delivery Report"
+
+            # Headers
+            headers = ["Part No.", "Part Name", "Total Qty", "Delivered Qty", "Remaining Qty", "Date"]
+            ws.append(headers)
+
+            # Data rows
+            for item_id in List_Total_TreeView_report.get_children():
+                row = List_Total_TreeView_report.item(item_id, "values")
+                ws.append(row)
+
+            try:
+                wb.save(file_path)
+                os.startfile(file_path)
+                messagebox.showinfo("Success", f"Report saved to {file_path}", parent=frm_delivery)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save report: {e}", parent=frm_delivery)
+
     frm_delivery = Toplevel(master)
     frm_delivery.title("Delivery & Packaging")
     frm_delivery.geometry("950x520+300+170")
@@ -396,6 +428,9 @@ def Frm_Delivery_Master(master, login_id):
                     font=('Times New Roman', 12),
                     width=12, bg='green', fg='white', command=Search_Record_Report)
     BtnSearchReport.place(x=525, y=70)
+    
+    BtnReport = Button(tab2, text='Generate Report', font=('Times New Roman', 14), width=17, bg='blue', fg='white', command=Generate_Excel_Report)
+    BtnReport.place(x=380, y=450)
 
     List_Total_TreeView_report = ttk.Treeview(
         tab2,
