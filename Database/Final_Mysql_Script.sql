@@ -99,6 +99,58 @@ LOCK TABLES `firm_master` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `gst_percentage_table`
+--
+
+DROP TABLE IF EXISTS `gst_percentage_table`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `gst_percentage_table` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `gst_per` double DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `gst_percentage_table`
+--
+
+LOCK TABLES `gst_percentage_table` WRITE;
+/*!40000 ALTER TABLE `gst_percentage_table` DISABLE KEYS */;
+INSERT INTO `gst_percentage_table` VALUES (1,18);
+/*!40000 ALTER TABLE `gst_percentage_table` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `invoice_master`
+--
+
+DROP TABLE IF EXISTS `invoice_master`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `invoice_master` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `invoice_id` varchar(45) DEFAULT NULL,
+  `po_no` varchar(45) DEFAULT NULL,
+  `quot_id` varchar(45) DEFAULT NULL,
+  `part_no` varchar(45) DEFAULT NULL,
+  `date_tr` datetime DEFAULT NULL,
+  `login_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `invoice_master`
+--
+
+LOCK TABLES `invoice_master` WRITE;
+/*!40000 ALTER TABLE `invoice_master` DISABLE KEYS */;
+/*!40000 ALTER TABLE `invoice_master` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `login_master`
 --
 
@@ -165,7 +217,7 @@ CREATE TABLE `master_table` (
   `valid_till` datetime DEFAULT NULL,
   `active` int DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -174,6 +226,7 @@ CREATE TABLE `master_table` (
 
 LOCK TABLES `master_table` WRITE;
 /*!40000 ALTER TABLE `master_table` DISABLE KEYS */;
+INSERT INTO `master_table` VALUES (1,'Ishan','8530013777','2025-12-19 00:00:00','23247204','2324720426121978','2026-12-19 00:00:00',1);
 /*!40000 ALTER TABLE `master_table` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -366,4 +419,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-14 10:07:37
+-- Dump completed on 2026-01-14  0:00:31

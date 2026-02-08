@@ -12,7 +12,8 @@ pdfmetrics.registerFont(TTFont('DejaVuSans', r"D:\\ToolCosting\\SupportFiles\\De
 base_font = "DejaVuSans"
 BLUE = colors.HexColor("#2F5597")
 
-def currency(x): return f"{x:,.2f} rs."
+def currency(x):
+    return f"{round(float(x)):,}.00"
 
 def create_quotation_pdf(data, filename, pdf_type):
     if isinstance(data, str):
@@ -52,6 +53,7 @@ Prepared by: {data['prepared_by']}"""
     right_box = [
         ["DATE", data['date']],
         [f"{pdf_type.upper()} ID", data['quote_no']],
+        ["PO NUMBER", data.get('po_no','N/A')],
         ["VALID UNTIL", data['valid_until']]
     ]
     right_table = Table(right_box, colWidths=[35*mm,40*mm])
@@ -79,23 +81,24 @@ Prepared by: {data['prepared_by']}"""
     elements.append(Spacer(1,10))
 
     # --- ITEMS TABLE ---
-    items = [["No","Description","Unit Price","Qty","Taxed","Total Amount"]]
+    items = [["No","Description","Price (Rs.)","Qty","Total Amount (Rs.)"]]
     for row in data['items']:
         items.append([
             str(row['no']),
             row['part_desc'],
             currency(row['unit_price']),
             str(row['qty']),
-            row.get("taxed",""),
+            # row.get("taxed",""),
             currency(row['total_price'])
         ])
 
-    item_table = Table(items, colWidths=[15*mm,60*mm,25*mm,20*mm,20*mm,25*mm], repeatRows=1)
+    item_table = Table(items, colWidths=[15*mm,60*mm,25*mm,20*mm,35*mm], repeatRows=1)
     item_table.setStyle(TableStyle([
         ("GRID",(0,0),(-1,-1),0.25,colors.black),
         ("BACKGROUND",(0,0),(-1,0),BLUE),
         ("TEXTCOLOR",(0,0),(-1,0),colors.white),
         ("ALIGN",(2,1),(-1,-1),"RIGHT"),
+        ("ALIGN",(3,0),(3,-1),"CENTER"),
         ("FONTNAME",(0,0),(-1,-1),base_font),
         ("FONTSIZE",(0,0),(-1,-1),9)
     ]))
@@ -104,12 +107,12 @@ Prepared by: {data['prepared_by']}"""
 
     # --- TOTALS ---
     totals = [
-        ["Subtotal", currency(data['totals']['subtotal'])],
-        ["Taxable", currency(data['totals']['taxable'])],
-        ["Tax rate", f"{data['totals']['tax_rate']}%"],
-        ["Tax due", currency(data['totals']['tax_due'])],
-        ["Other", currency(data['totals']['other'])],
-        ["TOTAL", currency(data['totals']['grand_total'])]
+        ["Subtotal (Rs.)", currency(data['totals']['subtotal'])],
+        ["Taxable (Rs.)", currency(data['totals']['taxable'])],
+        ["Tax rate (%)", f"{data['totals']['tax_rate']}%"],
+        ["Tax due (Rs.)", currency(data['totals']['tax_due'])],
+        # ["Other", currency(data['totals']['other'])],
+        ["TOTAL (Rs.)", currency(data['totals']['grand_total'])]
     ]
     total_table = Table(totals, colWidths=[50*mm,35*mm], hAlign="RIGHT")
     total_table.setStyle(TableStyle([

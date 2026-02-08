@@ -81,4 +81,6 @@ def Frm_Firm_Master(master, login_id, idn):
     TxtName.bind("<Return>", f1)
     TxtAddress.bind("<Return>", f2)
     TxtContact.bind("<Return>", f3)
-    frm_firm_master.mainloop()
+    frm_firm_master.bind("<Escape>", lambda e: frm_firm_master.destroy())
+    # frm_firm_master.mainloop()
+    return frm_firm_master

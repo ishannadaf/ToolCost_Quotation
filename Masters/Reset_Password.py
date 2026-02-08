@@ -60,5 +60,6 @@ def Frm_Reset_Password(master, login_id):
         
     TxtCurr.bind('<Return>', f1)
     TxtNew.bind('<Return>', f2)
-
-    frm_password.mainloop()
+    frm_password.bind("<Escape>", lambda e: frm_password.destroy())
+    # frm_password.mainloop()
+    return frm_password

@@ -10,6 +10,12 @@ db_connection = mysql.connector.connect(host="localhost", user="root", password=
 db_cursor = db_connection.cursor(buffered=True)
 db_cursor.execute("use tool_management")
 
+def Get_Firm_Details(login_id):
+        sql1 = f"SELECT firm_name, firm_address, firm_contact FROM firm_master where login_id = {DATABASE_SYN}"
+        db_cursor.execute(sql1, (login_id,))
+        data1 = db_cursor.fetchall()
+        return data1[0][0], data1[0][1], data1[0][2]
+    
 def Max_No(tb_name, col_name, cid):
     id_no = 0
     query = f"SELECT {col_name} FROM {tb_name} where login_id = {cid}"
@@ -33,14 +39,23 @@ def Customer_Details(cust_name, login_id):
 def Quotation_Id_Funct(cid):
     today_str = datetime.now().strftime("%d%m%y")
 
-    query = f"SELECT quotation_id FROM quotation_master WHERE login_id = {DATABASE_SYN} ORDER BY quotation_id DESC LIMIT 1"
-    db_cursor.execute(query, (cid,))
+    query = """
+        SELECT quotation_id
+        FROM quotation_master
+        WHERE login_id = %s
+          AND quotation_id LIKE %s
+        ORDER BY quotation_id DESC
+        LIMIT 1
+    """
+
+    like_pattern = f"{today_str}%"
+    db_cursor.execute(query, (cid, like_pattern))
     row = db_cursor.fetchone()
 
     if row is None:
         seq_no = 1
     else:
-        last_id = row[0]            # e.g. "020225003"
+        last_id = row[0]           # e.g. "130126004"
         seq_no = int(last_id[-3:]) + 1
 
     new_quotation_id = f"{today_str}{seq_no:03d}"
@@ -53,17 +68,19 @@ def Invoice_Id_Funct(login_id):
         SELECT invoice_id
         FROM quotation_master
         WHERE login_id = %s
+          AND invoice_id LIKE %s
         ORDER BY invoice_id DESC
         LIMIT 1
     """
-    db_cursor.execute(query, (login_id,))
+    
+    like_pattern = f"{today_str}%"
+    db_cursor.execute(query, (login_id, like_pattern))
     row = db_cursor.fetchone()
 
-    if row is None or row[0] is None:
-        # No previous non-NULL invoice_id
+    if row is None:
         seq_no = 1
     else:
-        last_id = row[0]   # e.g. "020225003"
+        last_id = row[0]           # e.g. "130126005"
         seq_no = int(last_id[-3:]) + 1
 
     new_invoice_id = f"{today_str}{seq_no:03d}"

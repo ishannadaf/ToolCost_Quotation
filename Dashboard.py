@@ -3,8 +3,10 @@ from PIL import ImageTk, Image
 import tkinter as tk
 from tkinter import font
 from Masters.Account_Master import Frm_Account_Master
+from Masters.Gst_Master import Frm_Gst_Percentage
 from Masters.Raw_Material import Frm_Raw_Master
 from Masters.Reset_Password import Frm_Reset_Password
+from Quotation.NewInvoice import Frm_New_Invoice
 from Quotation.Tool_Master import Frm_Tool_Master
 from Database.connection import *
 from Masters.Machining_Master import Frm_Machining_Master
@@ -12,6 +14,7 @@ from Masters.Firm_Master import Frm_Firm_Master
 from Quotation.Quotation_Master_History import Frm_Quot_History
 from Masters.Delivery_Master import Frm_Delivery_Master
 from Reports.Gst_Report import Frm_GST_Report
+from Reports.Invoice_History import Frm_Invoice_Report
 from Reports.Machining_Report import Frm_Machining_Report
 from Masters.Material_Master import Frm_material_master
 import os
@@ -19,7 +22,8 @@ import sys
 import ctypes
 from tkinter import filedialog, messagebox
 from openpyxl import Workbook
-
+from Reports.Quotation_History import Frm_Quotation_Report
+open_windows = {}
 def resource_path(relative_path):
     """Get absolute path to resource (for PyInstaller compatibility)."""
     try:
@@ -36,6 +40,30 @@ except Exception as e:
     print(e)
 
 def Dashboard(login_id):
+    def open_single_window(key, window_func, *args):
+        # print(f"Opening window: {key}")
+        if key in open_windows:
+            try:
+                if open_windows[key].winfo_exists():
+                    open_windows[key].lift()
+                    open_windows[key].focus_force()
+                    return
+            except:
+                pass
+
+        win = window_func(*args)
+        open_windows[key] = win
+
+        def on_close():
+            try:
+                del open_windows[key]
+            except:
+                pass
+            win.destroy()
+
+        win.protocol("WM_DELETE_WINDOW", on_close)
+
+    
     def logout_app():
         dash_screen.destroy()
         #Main_Function()
@@ -118,11 +146,12 @@ def Dashboard(login_id):
     # ---------- Heading button callbacks (show popups) ----------
     def open_master(evt=None, widget=None):
         entries = [
-            ("Self Details", lambda: Frm_Firm_Master(dash_screen, login_id, 2)),
-            ("Customer Details", lambda: Frm_Account_Master(dash_screen, login_id)),
-            ("Machining library", lambda: Frm_Machining_Master(dash_screen)),
-            ("Material Details", lambda: Frm_material_master(dash_screen)),
-            ("Scrap details", lambda: Frm_Raw_Master(dash_screen))
+            ("Self Details", lambda: open_single_window("firm_master", Frm_Firm_Master,dash_screen, login_id, 2)),
+            ("Customer Details", lambda: open_single_window("account_master", Frm_Account_Master, dash_screen, login_id)),
+            ("Machining Library", lambda: open_single_window("Machining_Library", Frm_Machining_Master,dash_screen)),
+            ("Material Details", lambda: open_single_window("material_master", Frm_material_master, dash_screen)),
+            ("Scrap Details", lambda: open_single_window("raw_master", Frm_Raw_Master, dash_screen)),
+            ("GST Details", lambda: open_single_window("gst_master", Frm_Gst_Percentage, dash_screen))
         ]
         popup_menu_for(widget or master_btn, entries)
 
@@ -136,47 +165,53 @@ def Dashboard(login_id):
         quot_menu = tk.Menu(popup, tearoff=0, font=menu_item_font)
         quot_menu.add_command(
             label="New",
-            command=lambda: Frm_Tool_Master(dash_screen, login_id)
+            command=lambda: open_single_window("tool_master", Frm_Tool_Master, dash_screen, login_id)
         )
         quot_menu.add_command(
             label="History",
-            command=lambda: Frm_Quot_History(dash_screen, login_id)
+            command=lambda: open_single_window("quot_history", Frm_Quot_History, dash_screen, login_id)
         )
         
         # Attach submenu under "Reports"
         popup.add_cascade(label="Quotation", menu=quot_menu)
         
-        # invoice_menu = tk.Menu(popup, tearoff=0, font=menu_item_font)
-        # invoice_menu.add_command(
-        #     label="New",
-        #     command=lambda: Frm_Tool_Master(dash_screen, login_id)
-        # )
-        # invoice_menu.add_command(
+        quot_menu1 = tk.Menu(popup, tearoff=0, font=menu_item_font)
+        quot_menu1.add_command(
+            label="New",
+            command=lambda: open_single_window("new_invoice", Frm_New_Invoice, dash_screen, login_id)
+        )
+        # quot_menu1.add_command(
         #     label="History",
-        #     command=lambda: Frm_Quot_History(dash_screen, login_id)
+        #     command=lambda: open_single_window("quot_history", Frm_Quot_History, dash_screen, login_id)
         # )
         
-        # # Attach submenu under "Reports"
-        # popup.add_cascade(label="Invoice", menu=invoice_menu)
+        # Attach submenu under "Reports"
+        popup.add_cascade(label="Invoice", menu=quot_menu1)
 
         popup.add_command(
             label="Package & Delivery",
-            command=lambda: Frm_Delivery_Master(dash_screen, login_id)
+            command=lambda: open_single_window("delivery_master", Frm_Delivery_Master, dash_screen, login_id)
         )
 
         # 2) Submenu for "Reports"
         reports_menu = tk.Menu(popup, tearoff=0, font=menu_item_font)
         reports_menu.add_command(
             label="Machining",
-            command=lambda: Frm_Machining_Report(dash_screen, login_id)
+            command=lambda: open_single_window("machining_report", Frm_Machining_Report, dash_screen, login_id)
         )
-        # reports_menu.add_command(
-        #     label="All Report",
-        #     command=lambda: print("All Report clicked")
-        # )
+    
         reports_menu.add_command(
             label="GST File",
-            command=lambda: Frm_GST_Report(dash_screen, login_id)
+            command=lambda: open_single_window("gst_report", Frm_GST_Report, dash_screen, login_id)
+        )
+        reports_menu.add_command(
+            label="Quotation Report",
+            command=lambda: open_single_window("quotation_report", Frm_Quotation_Report, dash_screen, login_id)
+        )
+        
+        reports_menu.add_command(
+            label="Invoice Report",
+            command=lambda: open_single_window("invoice_report", Frm_Invoice_Report, dash_screen, login_id)
         )
 
         # Attach submenu under "Reports"
@@ -193,7 +228,7 @@ def Dashboard(login_id):
     def open_help(evt=None, widget=None):
         entries = [
             ("Tool Excel", lambda: download_excel()),# replace with real function if any  
-            ("Reset Password", lambda: Frm_Reset_Password(dash_screen, login_id)),
+            ("Reset Password", lambda: open_single_window("reset_password", Frm_Reset_Password, dash_screen, login_id)),
             ("Log out", lambda: logout_app()),
         ]
         popup_menu_for(widget or help_btn, entries)
@@ -222,13 +257,9 @@ def Dashboard(login_id):
         command=lambda: open_help(widget=help_btn)
     )
     help_btn.pack(side="left", padx=20)
-
-    # Optional: allow keyboard/menu mnemonics (Alt+M, Alt+Q, etc.)
-    # dash_screen.bind_all("<Alt-m>", lambda e: open_master(widget=master_btn))
-    # dash_screen.bind_all("<Alt-q>", lambda e: open_quotation(widget=quotation_btn))
-    # dash_screen.bind_all("<Alt-h>", lambda e: open_help(widget=help_btn))
-
-    # ---------- Background image and canvas (kept from original) ----------
+    
+    child_window = None
+    
     screen_width = dash_screen.winfo_screenwidth()
     screen_height = dash_screen.winfo_screenheight()
 
@@ -241,12 +272,8 @@ def Dashboard(login_id):
     canvas.create_image(0, 0, anchor="nw", image=img)
     canvas.image = img  # keep reference so it isn't garbage-collected
 
-    # Place the top_frame above the canvas (so it stays visible)
     top_frame.lift(canvas)
     top_frame.place(x=0, y=0, relwidth=1)
-   
+
     on_start()
     dash_screen.mainloop()
-
-# Example call for testing:
-# Dashboard(login_id=1)

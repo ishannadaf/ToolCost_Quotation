@@ -33,7 +33,9 @@ def Frm_Quot_History(master, login_id):
         data1 = db_cursor.fetchall()
         trv_1.delete(*trv_1.get_children())
         date1 = datetime.strptime(TxtDate_1.get(),'%d-%m-%Y').strftime('%Y-%m-%d')
-        
+        gst_per = "SELECT gst_per FROM gst_percentage_table WHERE id = 1"
+        db_cursor.execute(gst_per)
+        gst_per = db_cursor.fetchone()[0]
         if data1 != []:
             name = data1[0][4]
             cnt1 = 1
@@ -87,7 +89,7 @@ def Frm_Quot_History(master, login_id):
                                 "phone":data_basics[0][3]
                             },
                             "items":items,
-                            "totals":{"subtotal":subtotal,"taxable":subtotal,"tax_rate":18.0,"tax_due":tax_due,"other":0,"grand_total":grand_total},
+                            "totals":{"subtotal":subtotal,"taxable":subtotal,"tax_rate":gst_per,"tax_due":tax_due,"other":0,"grand_total":grand_total},
                             "terms":[
                                 "1. Customer will be billed after indicating acceptance of this quote",
                                 "2. Payment will be due prior to delivery of service and goods",
@@ -206,7 +208,8 @@ def Frm_Quot_History(master, login_id):
 
     TxtSearch.bind("<<ComboboxSelected>>", f1)
     TxtSearchBy.bind("<<ComboboxSelected>>", f2)
-    
-    tool_master_history.mainloop()
+    tool_master_history.bind("<Escape>", lambda e: tool_master_history.destroy())
+    # tool_master_history.mainloop()
+    return tool_master_history
     
 # Frm_Quot_History(1,1)

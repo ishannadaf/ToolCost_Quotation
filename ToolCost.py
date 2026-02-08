@@ -75,13 +75,13 @@ def validate_license_in_db(var_hdd, var_sec, hwid_var):
         f"SELECT secret_key_hard, secret_key_1, secret_keycol, "
         f"valid_from, valid_till, active_ "
         f"FROM secret_key "
-        f"WHERE secret_key_1={DATABASE_SYN} "
-        f"AND secret_keycol={DATABASE_SYN} "
+        #f"WHERE secret_key_1={DATABASE_SYN} "
+        f"WHERE secret_keycol={DATABASE_SYN} "
         f"AND active_={DATABASE_SYN} "
         f"ORDER BY valid_till DESC"
     )
 
-    db_cursor.execute(sql, (final_code, hdd, '1'))
+    db_cursor.execute(sql, (hdd, '1'))
     row = db_cursor.fetchone()
 
     if not row:

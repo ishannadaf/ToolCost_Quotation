@@ -274,7 +274,8 @@ def Frm_Account_Master(master, login_id):
     TxtAcc.bind('<Return>', f2)
     TxtProv.bind('<Return>', f3)
     TxtContact.bind('<Return>', f4)
-    
-    acc_master.mainloop()
+    acc_master.bind("<Escape>", lambda e: acc_master.destroy())
+    # acc_master.mainloop()
+    return acc_master
 
 #Frm_Account_Master(1)

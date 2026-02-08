@@ -122,6 +122,7 @@ def Frm_material_master(master):
     
     on_start()
     trv.bind("<Double-1>", show_selected_record)
-    
-    material_master.mainloop()
+    material_master.bind("<Escape>", lambda e: material_master.destroy())
+    # material_master.mainloop()
+    return material_master
 # Frm_material_master(1)

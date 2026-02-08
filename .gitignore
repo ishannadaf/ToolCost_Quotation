@@ -1,0 +1,10 @@
+Temp
+venv
+build
+dist
+__pycache__
+*.egg-info
+Admin.spec
+ToolCost.spec
+Database
+SupportFiles

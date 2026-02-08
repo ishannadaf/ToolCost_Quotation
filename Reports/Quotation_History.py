@@ -7,17 +7,14 @@ from tkcalendar import DateEntry
 from datetime import datetime
 from Database.connection import *
 
-def Frm_GST_Report(master, login_id):
+def Frm_Quotation_Report(master, login_id):
     def Generate_Report(data, path):
         wb = Workbook()
         ws = wb.active
-        ws.title = "GST Report"
-
+        ws.title = "Quotation Report"
         # Header row
         headers = [
-            "Sr. No.", "Date", "Invoice no.", "Invoice Summary",
-            "Customer name", "Amount excluding GST", "IGST", "CGST", "Total GST"
-        ]
+            "Sr. No.", "Quotation No", "Customer Name", "Provider", "Amount", "Total GST", "Date"]
         ws.append(headers)
 
         # Data rows
@@ -61,18 +58,11 @@ def Frm_GST_Report(master, login_id):
         date2 = datetime.strptime(TxtTo.get(), '%d-%m-%Y').strftime('%Y-%m-%d')
 
         sql1 = f"""
-        SELECT qm.invoice_tr_date, qm.invoice_id, am.party_name, 
-            SUM(qmd.total_price), 
-            round(SUM(qmd.total_price)*9/100, 2) as IGST, 
-            round(SUM(qmd.total_price)*9/100, 2) as SGST, 
-            round(SUM(qmd.total_price)*18/100, 2) as Total_GST 
-        FROM quotation_master qm
-        inner join account_master am on am.id = qm.cust_id
+        select qm.quotation_id, am.party_name, qm.provider_name, sum(qmd.total_price) as Amt, (sum(qmd.total_price) * 18 / 100) as Total_GST, qm.date_tr_quot from quotation_master qm 
+        inner join account_master am on qm.cust_id = am.id
         inner join quotation_master_details qmd on qmd.Quotation_Id = qm.quotation_id
-        where qm.invoice_tr_date between '{date1}' and '{date2}'
-        AND qm.invoice_generated = 'Y'
-        AND qm.login_id = '{login_id}'
-        group by qm.invoice_tr_date, qm.invoice_id, am.party_name;
+        group by qm.quotation_id, am.party_name, qm.provider_name, qm.date_tr_quot
+        having qm.date_tr_quot between '{date1}' and '{date2}'
         """
         db_cursor.execute(sql1)
         data1 = db_cursor.fetchall()
@@ -80,20 +70,20 @@ def Frm_GST_Report(master, login_id):
             data = []
             cnt1 = 1
             for i in data1:
-                data.append([cnt1, datetime.strftime(data1[0][0], '%Y-%m-%d'), i[1], "", i[2], i[3], i[4], i[5], i[6]])
+                data.append([cnt1, i[0], i[1], i[2], i[3], i[4], datetime.strftime(i[5], '%Y-%m-%d')])
                 cnt1 += 1
-            path = r"D:\\ToolCosting\\Support Documents\\GST.xlsx"
+            path = r"D:\\ToolCosting\\Support Documents\\Quotation_List.xlsx"
             messagebox.showinfo("Info", "Report Generate Successfully. Click Ok to open.", parent=frm_report)
             Generate_Report(data, path)
         else:
-            messagebox.showerror("Error", f"No invoice generated between {data1}, {date2}", parent=frm_report)
+            messagebox.showerror("Error", f"No Quotation generated between {data1}, {date2}", parent=frm_report)
             
 
     frm_report = Toplevel(master)
     frm_report.geometry("500x300+480+220")
-    frm_report.title("GST Report")
+    frm_report.title("Quotation Report")
 
-    LblHead = Label(frm_report, text='GST Report', font=('Times New Roman', 24, 'bold'), fg='purple')
+    LblHead = Label(frm_report, text='Quotation Report', font=('Times New Roman', 24, 'bold'), fg='purple')
     LblHead.place(x=180, y=10)
 
     LblFrom = Label(frm_report, text='From', font=('Times New Roman', 18))

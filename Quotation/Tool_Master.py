@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import simpledialog
 from tkcalendar import DateEntry
 from tkinter import filedialog
 from openpyxl import load_workbook
@@ -210,6 +211,13 @@ class MachiningList(tk.Frame):
         return result
 
 def Frm_Tool_Master(master, login_id):
+    def enable_esc_close(window):
+        print(window)
+        def _close(event=None):
+            window.grab_release()
+            window.destroy()
+            return "break"   # ⛔ STOP event propagation
+        window.bind("<Escape>", _close)
     #============================================================================================
     #                           Quotation Form
     #============================================================================================
@@ -346,7 +354,7 @@ def Frm_Tool_Master(master, login_id):
             
             root = Toplevel(quotation_master)
             root.title("Machining Details")
-            
+            root.grab_set()
             machines = get_machines_from_db()
             machining_list = MachiningList(root, machines)
             machining_list.pack(padx=10, pady=10)
@@ -386,8 +394,10 @@ def Frm_Tool_Master(master, login_id):
                 root.destroy()
             BtnSubmit = tk.Button(root, text="Submit", font=('Times New Roman', 12), width=12, bg='green', fg='white', command=submit)
             BtnSubmit.pack(pady=10)
-
-            root.mainloop()
+            
+            enable_esc_close(root)
+            return root
+            # root.mainloop()
         
         def open_pdf():
             file_path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")], parent=quotation_master)
@@ -552,9 +562,10 @@ def Frm_Tool_Master(master, login_id):
             TxtPartNo.delete(0, END)
             
         
-        quotation_master = Toplevel(master)
+        quotation_master = Toplevel(tool_master)
         quotation_master.title("Quotation Master")
         quotation_master.geometry("1100x750+175+20")
+        quotation_master.grab_set()
         
         global selected_machining_list
         selected_machining_list = None
@@ -726,6 +737,8 @@ def Frm_Tool_Master(master, login_id):
         BtnSaveAndCalculate = Button(quotation_master, state='disabled', text='Save & Continue', font=('Times New Roman', 14), bg='green', fg='white', width=30, command=Save_Changed_Unit_Price)
         BtnSaveAndCalculate.place(x=740, y=690)
         
+        
+        
         def f1(event):
             if TxtScrabPer.get() == '':
                 scrab_per = 0
@@ -852,7 +865,12 @@ def Frm_Tool_Master(master, login_id):
         On_Start_Quo()
         if data_update:
             preset_data(data_update)
-        quotation_master.mainloop()
+        
+               
+        enable_esc_close(quotation_master)
+
+        return quotation_master
+        # quotation_master.mainloop()
     
     def Open_File():
         file_path = filedialog.askopenfilename(
@@ -938,15 +956,21 @@ def Frm_Tool_Master(master, login_id):
         i1 = item["values"]
         Frm_Quotation_Master(tool_master, i1, TxtCustomer1.get(), TxtProv.get(), login_id)
 
-    def Get_Firm_Details():
-        sql1 = f"SELECT firm_name, firm_address, firm_contact FROM firm_master where login_id = {DATABASE_SYN}"
-        db_cursor.execute(sql1, (login_id,))
-        data1 = db_cursor.fetchall()
-        return data1[0][0], data1[0][1], data1[0][2]
-    
     def Show_Quotation_Pdf(no):
+        po_number = None
         if txtSaveInfo['text'] == 'Done':
-            Company_Name, Company_Contact, Company_Address = Get_Firm_Details()
+            if no == 2:
+                po_number = simpledialog.askstring(
+                    "PO Number",
+                    "Enter Purchase Order (PO) Number:",
+                    parent=tool_master
+                )
+
+                # If user cancels or leaves empty
+                if not po_number:
+                    messagebox.showwarning("Required", "PO Number is required to generate invoice", parent=tool_master)
+                    return
+            Company_Name, Company_Contact, Company_Address = Get_Firm_Details(login_id)
             customer_name = TxtCustomer1.get()
             party_name, contact, address, mid = Customer_Details(customer_name, login_id)
             provider_name = TxtProv.get()
@@ -956,6 +980,11 @@ def Frm_Tool_Master(master, login_id):
             if no == 2:
                 invoice_id = Invoice_Id_Funct(login_id)
             subtotal = 0
+            
+            gst_per = "SELECT gst_per FROM gst_percentage_table WHERE id = 1"
+            db_cursor.execute(gst_per)
+            gst_per = db_cursor.fetchone()[0]
+            data = []
             for child in trv.get_children():
                 vals = trv.item(child)["values"]
                 items.append({
@@ -966,6 +995,7 @@ def Frm_Tool_Master(master, login_id):
                     "total_price": float(vals[5]),
                     "taxed":""
                 })
+                #data.append((invoice_id, quotation_id, vals[0], po_no, date_tr, login_id))
                 subtotal += float(vals[5])
             tax_due = round(subtotal*18/100,2)
             grand_total = subtotal + tax_due
@@ -977,6 +1007,7 @@ def Frm_Tool_Master(master, login_id):
                 },
                 "date": datetime.today().strftime("%d-%m-%Y"),
                 "quote_no": quotation_id if no == 1 else invoice_id,
+                "po_no": "" if no ==1 else po_number,
                 "valid_until": term_date,
                 "prepared_by": "Admin",
                 "customer": {
@@ -986,7 +1017,7 @@ def Frm_Tool_Master(master, login_id):
                     "phone":contact
                 },
                 "items":items,
-                "totals":{"subtotal":subtotal,"taxable":subtotal,"tax_rate":18.0,"tax_due":tax_due,"other":0,"grand_total":grand_total},
+                "totals":{"subtotal":subtotal,"taxable":subtotal,"tax_rate":gst_per,"tax_due":tax_due,"other":0,"grand_total":grand_total},
                 "terms":[
                     "1. Customer will be billed after indicating acceptance of this quote",
                     "2. Payment will be due prior to delivery of service and goods",
@@ -1000,13 +1031,24 @@ def Frm_Tool_Master(master, login_id):
                     messagebox.showinfo("Success",f"QUOTATION is generated successfully...", parent=tool_master)
                     create_quotation_pdf(sample, pdf_path, "QUOTATION")
                 elif no == 2:
+                    # po_number = simpledialog.askstring(
+                    #     "PO Number",
+                    #     "Enter Purchase Order (PO) Number:",
+                    #     parent=tool_master
+                    # )
+
+                    # # If user cancels or leaves empty
+                    # if not po_number:
+                    #     messagebox.showwarning("Required", "PO Number is required to generate invoice", parent=tool_master)
+                    #     return
                     messagebox.showinfo("Success",f"Invoice is generated successfully...", parent=tool_master)
                     date_tr = datetime.today().date()
                     sql_update = f"UPDATE quotation_master SET invoice_id = {DATABASE_SYN}, invoice_tr_date = {DATABASE_SYN}, invoice_generated = {DATABASE_SYN} WHERE quotation_id = {DATABASE_SYN} AND login_id = {DATABASE_SYN}"
                     params = (invoice_id, date_tr, 'Y', var_quot.get(), login_id)
-                    
                     db_cursor.execute(sql_update, params)
-                    #db_cursor.execute(sql_update)
+                    
+                    sql_new = "INSERT INTO invoice_master (invoice_id, quot_id, part_no, po_no, date_tr, login_id) VALUES (%s, %s, %s, %s, %s, %s)"
+                    db_cursor.executemany(sql_new, [(invoice_id, var_quot.get(), trv.item(child)["values"][1], po_number, date_tr, login_id) for child in trv.get_children()])
                     
                     db_connection.commit()
                     var_quot.set('')
@@ -1018,7 +1060,7 @@ def Frm_Tool_Master(master, login_id):
             else:
                 messagebox.showerror("Error","Please fill the records to generate quotation/invoice.", parent=tool_master)
         else:
-            messagebox.showerror("Error", "Please complete the unfinished quotation.",parent = tool_master)
+            messagebox.showerror("Error", "Please save/update first.",parent = tool_master)
 
     def Save_Data_Quotation():
         ans = messagebox.askyesno("Warning", "Once you save the data you can't edit. You want to continue?", parent=tool_master)
@@ -1305,6 +1347,7 @@ def Frm_Tool_Master(master, login_id):
     tool_master = Toplevel(master)
     tool_master.title("Tool Master")
     tool_master.geometry("1100x680+175+70")
+    tool_master.grab_set()
     s = ttk.Style()
     s.configure('TNotebook.Tab',font=('Times New Roman',14))
     var_percentage = tk.IntVar()
@@ -1371,8 +1414,8 @@ def Frm_Tool_Master(master, login_id):
     trv.heading("part_no" , text="Part No")
     trv.heading("part_desc" , text="Part Description")
     trv.heading("qty" , text="Qty.")
-    trv.heading("unit_price" , text="Unit Price")
-    trv.heading("total_price" , text="Total Price")
+    trv.heading("unit_price" , text="Price (Rs.)")
+    trv.heading("total_price" , text="Total Price (Rs.)")
     
     #trv.heading("Provider" , text="Provider")
     
@@ -1499,5 +1542,9 @@ def Frm_Tool_Master(master, login_id):
     trv_1History.bind("<Double-1>", show_selected_record_update)
     On_Start_tab2()
     # tool_master_history.mainloop()
+    
+    
+    enable_esc_close(tool_master)
+    return tool_master
     
 #Frm_Tool_Master(1)

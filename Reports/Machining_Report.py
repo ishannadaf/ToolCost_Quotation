@@ -186,7 +186,8 @@ def Frm_Machining_Report(master, login_id):
     BtnGenerate.place(x=90, y=150)
     BtnExit = Button(frm_report, text='Exit', font=('Times New Roman', 14), width=14, bg='red', fg='white', command=frm_report.destroy)
     BtnExit.place(x=260, y=150)
-    
-    frm_report.mainloop()
+    frm_report.bind("<Escape>", lambda e: frm_report.destroy())
+    # frm_report.mainloop()
+    return frm_report
     
 # Frm_Machining_Report()

@@ -459,6 +459,6 @@ def Frm_Delivery_Master(master, login_id):
         Search_Record_Report()
 
     TxtQuotReport.bind('<Return>', f2)
-
-
-    frm_delivery.mainloop()
+    frm_delivery.bind("<Escape>", lambda e: frm_delivery.destroy())
+    # frm_delivery.mainloop()
+    return frm_delivery

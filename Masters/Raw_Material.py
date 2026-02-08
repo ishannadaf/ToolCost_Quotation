@@ -122,6 +122,7 @@ def Frm_Raw_Master(master):
     
     on_start()
     trv.bind("<Double-1>", show_selected_record)
-    
-    machining_master.mainloop()
+    machining_master.bind("<Escape>", lambda e: machining_master.destroy())
+    # machining_master.mainloop()
+    return machining_master
 #Frm_Machining_Master(1)
