@@ -1,3 +1,4 @@
+from logging import root
 from tkinter import *
 from tkinter import messagebox
 from Database.connection import *
@@ -14,6 +15,8 @@ def Frm_Firm_Master(master, login_id, idn):
             TxtName.insert(0, data1[0][1])
             TxtAddress.insert(0, data1[0][2])
             TxtContact.insert(0, data1[0][3])
+            
+        TxtName.focus()
     def Save_Data():
         n1 = TxtName.get()
         n2 = TxtAddress.get()
@@ -54,9 +57,13 @@ def Frm_Firm_Master(master, login_id, idn):
     TxtAddress = Entry(Frm1, font=('Times New Roman', 18), width=30, justify='center')
     TxtAddress.place(x=140, y=90)
     
+    def only_int(new_value):
+        return (new_value.isdigit() or new_value == "") and len(new_value) < 11
+    
+    vcmd = (frm_firm_master.register(only_int), "%P")
     LblContact = Label(Frm1, text='Contact', font=('Times New Roman', 18))
     LblContact.place(x=35, y=150)
-    TxtContact = Entry(Frm1, font=('Times New Roman', 18), width=30, justify='center')
+    TxtContact = Entry(Frm1, font=('Times New Roman', 18),validate="key", validatecommand=vcmd, width=30, justify='center')
     TxtContact.place(x=140, y=150)
     
     BtnSave = Button(Frm1, text='Save', font=('Times New Roman', 14), width=14, fg='white', bg='green', command=Save_Data)
@@ -77,10 +84,13 @@ def Frm_Firm_Master(master, login_id, idn):
     def f3(event):
         if TxtName.get() and TxtAddress.get() and TxtContact.get():
             Save_Data()
-            
+    
+    def close_window(event=None):
+        #print("Closing window...")
+        frm_firm_master.destroy()
     TxtName.bind("<Return>", f1)
     TxtAddress.bind("<Return>", f2)
     TxtContact.bind("<Return>", f3)
-    frm_firm_master.bind("<Escape>", lambda e: frm_firm_master.destroy())
+    frm_firm_master.bind("<Escape>", lambda e: close_window())
     # frm_firm_master.mainloop()
     return frm_firm_master

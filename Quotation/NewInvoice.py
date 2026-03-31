@@ -4,6 +4,7 @@ import tkinter.ttk as ttk
 from Database.connection import *
 from tkinter import messagebox
 import os
+import tkinter as tk
 from datetime import datetime, timedelta
 from Quotation.Quotation_Master_PDF import create_quotation_pdf
 
@@ -11,6 +12,16 @@ def Frm_New_Invoice(master, login_id):
 
     all_entries = {}
     # ---------------- HELPER FUNCTIONS ----------------
+    
+    def enable_esc_close(window):
+        #print(window)
+        def _close(event=None):
+            window.grab_release()
+            window.destroy()
+            return "break"   # ⛔ STOP event propagation
+        window.bind("<Escape>", _close)
+        
+        
     def resequence_treeview(trv):
         for idx, item in enumerate(trv.get_children(), start=1):
             values = list(trv.item(item, "values"))
@@ -18,17 +29,64 @@ def Frm_New_Invoice(master, login_id):
             trv.item(item, values=values)
 
     # ---------------- AUTOCOMPLETE COMBOBOX ----------------
+
     class AutocompleteCombobox(ttk.Combobox):
-        def handle_keyrelease(self, event):
-            val = self.get().lower()
-            data = [x for x in self._completion_list if x.lower().startswith(val)]
-            self['values'] = data
-        
+        def __init__(self, master=None, **kwargs):
+            super().__init__(master, **kwargs)
+            self._completion_list = []
+            self._default_text = ""
+
+            # Set default text
+            self.set(self._default_text)
+
+            # Bindings
+            self.bind('<KeyRelease>', self._on_keyrelease)
+            self.bind('<Tab>', self._accept_autocomplete)
+            self.bind('<Return>', self._accept_autocomplete)
+
+            # 🔥 Detect paste actions
+            self.bind('<<Paste>>', self._on_paste)
+            self.bind('<Control-v>', self._on_paste)
+
         def set_completion_list(self, completion_list):
-            self._completion_list = completion_list#sorted(completion_list, key=str.lower)
-            self.bind('<KeyRelease>', self.handle_keyrelease)
+            self._completion_list = sorted(completion_list, key=str.lower)
             self['values'] = self._completion_list
 
+        def _clear_default_if_needed(self):
+            if self.get() == self._default_text:
+                self.delete(0, tk.END)
+
+        def _on_paste(self, event=None):
+            self._clear_default_if_needed()
+            # Allow normal paste to continue
+            return None
+
+        def _on_keyrelease(self, event):
+            # If user starts typing and default is there → clear it
+            if self.get() == self._default_text:
+                self.delete(0, tk.END)
+                return
+
+            if event.keysym in ('BackSpace', 'Left', 'Right', 'Up', 'Down'):
+                return
+
+            typed = self.get()
+            if not typed:
+                return
+
+            for item in self._completion_list:
+                if item.lower().startswith(typed.lower()):
+                    self.set(item)
+
+                    # Highlight suggestion part
+                    self.selection_range(len(typed), tk.END)
+                    self.icursor(len(typed))
+                    break
+
+        def _accept_autocomplete(self, event=None):
+            self.icursor(tk.END)
+            self.selection_clear()
+            return "break"
     # ---------------- LOAD QUOTATIONS ----------------
     def On_Start_New_Quot():
         all_entries.clear()
@@ -57,7 +115,7 @@ def Frm_New_Invoice(master, login_id):
         db_cursor.execute(sql, (login_id,))
         rows = db_cursor.fetchall()
 
-        quot_list = ['Select']
+        quot_list = []
         for r in rows:
             quot_id = r[0]
             item = (r[1], r[2], r[3], r[4], r[5])
@@ -66,11 +124,12 @@ def Frm_New_Invoice(master, login_id):
                 quot_list.append(quot_id)
 
         entQuotationID.set_completion_list(quot_list)
-        entQuotationID.current(0)
-
+        if quot_list:
+            entQuotationID.current(0)
         inv_no = Invoice_Id_Funct(login_id)
         lblInvoiceNo.config(text=f"Invoice No: {inv_no}")
-
+        
+        entQuotationID.focus_set()
     # ---------------- SEARCH QUOTATION ----------
     
     def search_quotation():
@@ -110,6 +169,72 @@ def Frm_New_Invoice(master, login_id):
         resequence_treeview(trv_left)
 
     # ---------------- GENERATE INVOICE ----------------
+    
+
+
+    # ---------------- SHOW INVOICE (PDF) ----------------
+    def Show_Invoice(po_number): 
+        Company_Name, Company_Contact, Company_Address = Get_Firm_Details(login_id) 
+        quotation_id = entQuotationID.get() 
+        sql1 = f""" select am.party_name, qm.provider_name from account_master am inner join quotation_master qm on am.id = qm.cust_id where qm.quotation_id = '{quotation_id}'; """ 
+        db_cursor.execute(sql1) 
+        data1 = db_cursor.fetchall() 
+        customer_name = data1[0][0] 
+        party_name, contact, address, mid = Customer_Details(customer_name, login_id) 
+        provider_name = data1[0][1] 
+        term_date = (datetime.today() + timedelta(days=30)).strftime('%d-%m-%Y') 
+        items = [] 
+        invoice_id = lblInvoiceNo['text'].split(": ")[1]
+        subtotal = 0
+        gst_per = "SELECT gst_per FROM gst_percentage_table WHERE id = 1" 
+        db_cursor.execute(gst_per) 
+        gst_per = int(db_cursor.fetchone()[0])
+        for child in trv_right.get_children(): 
+            vals = trv_right.item(child)["values"] 
+            items.append({ "no": vals[0], "part_desc": vals[2], "qty": int(vals[3]), "unit_price": int(float(vals[4])), "total_price": int(float(vals[5])), "taxed":"" }) 
+            subtotal += int(float(vals[5])) 
+        
+        tax_due = int(subtotal*gst_per/100)
+        grand_total = subtotal + tax_due 
+        
+        terms_data = get_terms_conditions(quotation_id)
+        sample = { "company": 
+                    { "name":Company_Name, 
+                    "address":Company_Address, 
+                    "phone": Company_Contact }, 
+                "date": datetime.today().strftime("%d-%m-%Y"), 
+                "quote_no": invoice_id, 
+                "po_no": po_number,
+                "valid_until": term_date,
+                "prepared_by": "Admin", 
+                "customer": 
+                    { "name":party_name, 
+                    "company":provider_name, 
+                    "address":address, 
+                    "phone":contact }, 
+                "items":items, 
+                "totals":
+                    {"subtotal":subtotal,
+                    "taxable":subtotal,
+                    "tax_rate":gst_per,
+                    "tax_due":tax_due,
+                    "other":0,
+                    "grand_total":grand_total},
+                "terms":
+                    terms_data}
+        if items != []:
+            pdf_path = r"D:\\ToolCosting\\Support Documents\\Tool_Quotation.pdf" 
+            messagebox.showinfo("Success",f"Invoice is generated successfully...", parent=new_quot) 
+            date_tr = datetime.today().date() 
+            sql_update = f"UPDATE quotation_master SET invoice_id = {DATABASE_SYN}, invoice_tr_date = {DATABASE_SYN}, invoice_generated = {DATABASE_SYN} WHERE quotation_id = {DATABASE_SYN} AND login_id = {DATABASE_SYN}" 
+            params = (invoice_id, date_tr, 'Y', quotation_id, login_id) 
+            db_cursor.execute(sql_update, params) 
+            #db_cursor.execute(sql_update)
+            db_connection.commit()
+            create_quotation_pdf(sample, pdf_path, "INVOICE", new_quot) 
+            # os.startfile(pdf_path) #txtSaveInfo['text'] = '' 
+            trv_right.delete(*trv_right.get_children())
+            trv_left.delete(*trv_left.get_children())
     def generate_invoice():
         if not trv_right.get_children():
             messagebox.showerror("Error", "No items selected for invoice", parent=new_quot)
@@ -148,75 +273,8 @@ def Frm_New_Invoice(master, login_id):
         messagebox.showinfo("Success", "Invoice generated successfully", parent=new_quot)
         Show_Invoice(po_number)
         On_Start_New_Quot()
-
-
-    # ---------------- SHOW INVOICE (PDF) ----------------
-    def Show_Invoice(po_number): 
-        Company_Name, Company_Contact, Company_Address = Get_Firm_Details(login_id) 
-        quotation_id = entQuotationID.get() 
-        sql1 = f""" select am.party_name, qm.provider_name from account_master am inner join quotation_master qm on am.id = qm.cust_id where qm.quotation_id = '{quotation_id}'; """ 
-        db_cursor.execute(sql1) 
-        data1 = db_cursor.fetchall() 
-        customer_name = data1[0][0] 
-        party_name, contact, address, mid = Customer_Details(customer_name, login_id) 
-        provider_name = data1[0][1] 
-        term_date = (datetime.today() + timedelta(days=30)).strftime('%d-%m-%Y') 
-        items = [] 
-        invoice_id = lblInvoiceNo['text'].split(": ")[1]
-        subtotal = 0 
-        gst_per = "SELECT gst_per FROM gst_percentage_table WHERE id = 1" 
-        db_cursor.execute(gst_per) 
-        gst_per = db_cursor.fetchone()[0] 
-        for child in trv_right.get_children(): 
-            vals = trv_right.item(child)["values"] 
-            items.append({ "no": vals[1], "part_desc": vals[2], "qty": int(vals[3]), "unit_price": float(vals[4]), "total_price": float(vals[5]), "taxed":"" }) 
-            subtotal += float(vals[5]) 
-        
-        tax_due = round(subtotal*18/100,2) 
-        grand_total = subtotal + tax_due 
-        
-        sample = { "company": 
-                    { "name":Company_Name, 
-                    "address":Company_Address, 
-                    "phone": Company_Contact }, 
-                "date": datetime.today().strftime("%d-%m-%Y"), 
-                "quote_no": invoice_id, 
-                "po_no": po_number,
-                "valid_until": term_date,
-                "prepared_by": "Admin", 
-                "customer": 
-                    { "name":party_name, 
-                    "company":provider_name, 
-                    "address":address, 
-                    "phone":contact }, 
-                "items":items, 
-                "totals":
-                    {"subtotal":subtotal,
-                    "taxable":subtotal,
-                    "tax_rate":gst_per,
-                    "tax_due":tax_due,
-                    "other":0,
-                    "grand_total":grand_total}, 
-                "terms":
-                    [ "1. Customer will be billed after indicating acceptance of this quote", 
-                    "2. Payment will be due prior to delivery of service and goods", 
-                    "3. Please fax or mail the signed price quote to the address above"]} 
-        if items != []:
-            pdf_path = r"D:\\ToolCosting\\Support Documents\\Tool_Quotation.pdf" 
-            messagebox.showinfo("Success",f"Invoice is generated successfully...", parent=new_quot) 
-            date_tr = datetime.today().date() 
-            sql_update = f"UPDATE quotation_master SET invoice_id = {DATABASE_SYN}, invoice_tr_date = {DATABASE_SYN}, invoice_generated = {DATABASE_SYN} WHERE quotation_id = {DATABASE_SYN} AND login_id = {DATABASE_SYN}" 
-            params = (invoice_id, date_tr, 'Y', quotation_id, login_id) 
-            db_cursor.execute(sql_update, params) 
-            #db_cursor.execute(sql_update)
-            db_connection.commit()
-            create_quotation_pdf(sample, pdf_path, "INVOICE") 
-            os.startfile(pdf_path) #txtSaveInfo['text'] = '' 
-            trv_right.delete(*trv_right.get_children())
-            trv_left.delete(*trv_left.get_children())
-
     # ---------------- UI ----------------
-    new_quot = Tk()
+    new_quot = Toplevel(master)
     new_quot.title("New Invoice")
     new_quot.geometry("1050x550+300+120")
 
@@ -226,8 +284,13 @@ def Frm_New_Invoice(master, login_id):
     Label(new_quot, text="Quotation ID:",
         font=("Times New Roman", 16)).place(x=80, y=80)
 
+    def only_int(new_value):
+        return new_value.isdigit() or new_value == ""
+
+    # vcmd = (new_quot.register(only_int), "%P")
     entQuotationID = AutocompleteCombobox(new_quot, font=("Times New Roman", 16), width=20)
     entQuotationID.place(x=230, y=80)
+    entQuotationID.focus_set()
 
     Button(new_quot, text="Search", font=("Times New Roman", 14),
         bg="green", fg="white", command=search_quotation).place(x=500, y=78)
@@ -272,4 +335,5 @@ def Frm_New_Invoice(master, login_id):
         command=generate_invoice).place(x=410, y=500)
 
     On_Start_New_Quot()
+    enable_esc_close(new_quot)
     return new_quot

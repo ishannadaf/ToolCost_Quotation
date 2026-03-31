@@ -15,27 +15,34 @@ def Frm_Quot_History(master, login_id):
         n3 = TxtCustomerS.get()
         if n1 == "Quotation":
             if n2 == "Quotation No":
-                sql1 = f"SELECT qm.quotation_id, qm.provider_name, qm.date_tr_quot, qm.invoice_tr_date, am.party_name, qm.invoice_id FROM quotation_master qm INNER JOIN account_master am on qm.cust_id = am.id WHERE qm.quotation_id = '{n3}'"
+                sql1 = f"""SELECT qm.quotation_id, qm.provider_name, qm.date_tr_quot, qm.invoice_tr_date, am.party_name, qm.invoice_id, qm.terms_conditions
+                FROM quotation_master qm 
+                INNER JOIN account_master am on qm.cust_id = am.id WHERE qm.quotation_id = '{n3}'"""
             else:
                 sql1 = f"""SELECT qm.quotation_id, qm.provider_name, qm.date_tr_quot, qm.invoice_tr_date, 
-                am.party_name, qm.invoice_id FROM quotation_master qm INNER JOIN account_master am on qm.cust_id = am.id 
+                am.party_name, qm.invoice_id, qm.terms_conditions FROM quotation_master qm INNER JOIN account_master am on qm.cust_id = am.id 
                     INNER JOIN quotation_master_details qmd on qmd.Quotation_Id = qm.quotation_id
                     WHERE qmd.part_no = '{n3}'"""
         if n1 == "Invoice":
             if n2 == "Invoice No":
-                sql1 = f"SELECT qm.quotation_id, qm.provider_name, qm.date_tr_quot, qm.invoice_tr_date, am.party_name, qm.invoice_id FROM quotation_master qm INNER JOIN account_master am on qm.cust_id = am.id WHERE qm.invoice_id = '{n3}' and invoice_generated = 'Y'"
+                sql1 = f"""SELECT qm.quotation_id, qm.provider_name, qm.date_tr_quot, qm.invoice_tr_date, am.party_name, qm.invoice_id, im.po_no, qm.terms_conditions FROM quotation_master qm 
+                INNER JOIN account_master am on qm.cust_id = am.id 
+                INNER JOIN invoice_master im on im.quot_id = qm.quotation_id 
+                WHERE qm.invoice_id = '{n3}' and invoice_generated = 'Y'"""
             else:
                 sql1 = f"""SELECT qm.quotation_id, qm.provider_name, qm.date_tr_quot, qm.invoice_tr_date, 
-                am.party_name, qm.invoice_id FROM quotation_master qm INNER JOIN account_master am on qm.cust_id = am.id 
-                    INNER JOIN quotation_master_details qmd on qmd.Quotation_Id = qm.quotation_id
-                    WHERE qmd.part_no = '{n3}'"""
+                am.party_name, qm.invoice_id, im.po_no, qm.terms_conditions FROM quotation_master qm 
+                INNER JOIN account_master am on qm.cust_id = am.id 
+                INNER JOIN quotation_master_details qmd on qmd.Quotation_Id = qm.quotation_id
+                INNER JOIN invoice_master im on im.quot_id = qm.quotation_id
+                WHERE qmd.part_no = '{n3}'"""
         db_cursor.execute(sql1)
         data1 = db_cursor.fetchall()
         trv_1.delete(*trv_1.get_children())
         date1 = datetime.strptime(TxtDate_1.get(),'%d-%m-%Y').strftime('%Y-%m-%d')
         gst_per = "SELECT gst_per FROM gst_percentage_table WHERE id = 1"
         db_cursor.execute(gst_per)
-        gst_per = db_cursor.fetchone()[0]
+        gst_per = int(db_cursor.fetchone()[0])
         if data1 != []:
             name = data1[0][4]
             cnt1 = 1
@@ -46,9 +53,9 @@ def Frm_Quot_History(master, login_id):
                 sample = {}
                 if data2 != []:
                     for j in data2:
-                        sql3 = f"SELECT * FROM quotation_master_details_machining_details WHERE Quotation_Id = {DATABASE_SYN} AND part_no_id = {DATABASE_SYN} AND date_tr = {DATABASE_SYN}"
-                        db_cursor.execute(sql3, (j[0], j[2], j[15]))
-                        data3 = db_cursor.fetchall()
+                        # sql3 = f"SELECT * FROM quotation_master_details_machining_details WHERE Quotation_Id = {DATABASE_SYN} AND part_no_id = {DATABASE_SYN} AND date_tr = {DATABASE_SYN}"
+                        # db_cursor.execute(sql3, (j[0], j[2], j[17]))
+                        # data3 = db_cursor.fetchall()
                         
                         Company_Name, Company_Address, Company_Contact = Get_Firm_Details()
                         sql_basics = f"SELECT * FROM account_master WHERE party_name = {DATABASE_SYN}"
@@ -63,15 +70,15 @@ def Frm_Quot_History(master, login_id):
                                 "no": cnt,
                                 "part_desc": child[3],
                                 "qty": int(child[4]),
-                                "unit_price": float(child[14]),
-                                "total_price": float(child[15]),
+                                "unit_price": int(float(child[15])),
+                                "total_price": int(float(child[16])),
                                 "taxed":""
                             })
                             cnt += 1
-                            subtotal += float(child[15])
-                        tax_due = round(subtotal*18/100,2)
+                            subtotal += int(float(child[16]))
+                        tax_due = round(subtotal*gst_per/100)
                         grand_total = subtotal + tax_due
-                        
+                        po_number = '--' if n1 == "Quotation" else i[6] 
                         sample = {
                             "company": {
                                 "name":Company_Name,
@@ -80,6 +87,7 @@ def Frm_Quot_History(master, login_id):
                             },
                             "date": datetime.today().strftime("%d-%m-%Y"),
                             "quote_no": i[0] if n1 == "Quotation" else i[5],
+                            "po_no": po_number,
                             "valid_until": (i[2] + timedelta(days=30)).strftime('%d-%m-%Y'),
                             "prepared_by": "Admin",
                             "customer": {
@@ -90,11 +98,7 @@ def Frm_Quot_History(master, login_id):
                             },
                             "items":items,
                             "totals":{"subtotal":subtotal,"taxable":subtotal,"tax_rate":gst_per,"tax_due":tax_due,"other":0,"grand_total":grand_total},
-                            "terms":[
-                                "1. Customer will be billed after indicating acceptance of this quote",
-                                "2. Payment will be due prior to delivery of service and goods",
-                                "3. Please fax or mail the signed price quote to the address above"
-                            ]
+                            "terms":i[-1].split("\n")
                         }
 
                 trv_1.insert("", 'end', text=str(cnt1), values=(str(i[0]), str(i[4]), str(i[1]), str(i[2].date()), str(i[3]), sample))
@@ -112,13 +116,12 @@ def Frm_Quot_History(master, login_id):
         i1 = item["values"]
         
         sample = i1[-1]
+        print("SAMPLE DATA:", sample)
         msg = messagebox.askyesno("Question","You want to open this quotation ?", parent=tool_master_history)
         if msg:
             n1 = TxtSearch.get().upper()
-            create_quotation_pdf(sample, r"D:\\ToolCosting\\Support Documents\\Tool_Quotation.pdf", n1)
-            messagebox.showinfo("Info", "Opening your Quotation...Click Ok.", parent=tool_master_history)
-            os.startfile(r"D:\\ToolCosting\\Support Documents\\Tool_Quotation.pdf")
-        
+            create_quotation_pdf(sample, r"D:\\ToolCosting\\Support Documents\\Tool_Quotation.pdf", n1, tool_master_history)
+            
     def On_Start_tab2():
         sql1 = f"SELECT party_name FROM account_master WHERE login_id = {DATABASE_SYN}"
         db_cursor.execute(sql1, (login_id,))
@@ -150,7 +153,7 @@ def Frm_Quot_History(master, login_id):
     TxtSearch.current(0)
     LblSearchBy = Label(Frm1, text='         By', font=('Times New Roman', 17))
     LblSearchBy.place(x=260, y=10)
-    TxtSearchBy = ttk.Combobox(Frm1, width=12, justify='center', values=('Quotation No','Part No'), font=('Times New Roman', 17), state="readonly")
+    TxtSearchBy = ttk.Combobox(Frm1, width=12, justify='center', values=('Quotation No', 'Invoice No'), font=('Times New Roman', 17), state="readonly")
     TxtSearchBy.place(x=380, y=10)
     TxtSearchBy.current(0)
 
@@ -158,6 +161,7 @@ def Frm_Quot_History(master, login_id):
     LblCust.place(x=50, y=60)
     TxtCustomerS = Entry(Frm1, width=26, font=('Times New Roman', 17), justify='center')
     TxtCustomerS.place(x=210, y=60)
+    TxtCustomerS.focus()
     #TxtCustomerS._open_dropdown()
 
     LblDate = Label(Frm1, text="Date :", font=('Times New Roman', 16))
@@ -195,13 +199,16 @@ def Frm_Quot_History(master, login_id):
     # On_Start_tab2()
     
     def f1(event):
+        TxtSearchBy.set('')
+        trv_1.delete(*trv_1.get_children())
         if TxtSearch.get() == 'Quotation':
-            TxtSearchBy['values'] = ('Quotation No', 'Part No')
+            TxtSearchBy['values'] = ['Quotation No']
         else:
-            TxtSearchBy['values'] = ('Invoice No', 'Part No')
+            TxtSearchBy['values'] = ['Invoice No']
         TxtSearchBy.focus()
         TxtSearchBy.event_generate("<Down>")
     def f2(event):
+        trv_1.delete(*trv_1.get_children())
         n1 = TxtSearchBy.get()
         LblCust['text'] = f'{n1}: '
         TxtCustomerS.focus()

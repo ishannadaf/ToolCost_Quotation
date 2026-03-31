@@ -13,7 +13,6 @@ SECRET = 93847561
 SKY = "#00A3E0"
 WHITE = "#FFFFFF"
 
-
 # -------------------------------------------------------
 # 1. Read Hard Disk Serial Number
 # -------------------------------------------------------
@@ -28,7 +27,6 @@ def get_hdd_serial():
         return serials[0] if serials else "UNKNOWN"
     except Exception:
         return "UNKNOWN"
-
 
 def get_old_hwid():
     parts = []
@@ -48,7 +46,6 @@ def get_old_hwid():
     digest = hashlib.sha256(raw).hexdigest()
     num = int(digest, 16) % 10**6
     return f"{num:06d}"
-
 
 def compute_hw_values():
     """

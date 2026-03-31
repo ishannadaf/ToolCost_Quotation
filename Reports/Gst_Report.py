@@ -15,7 +15,7 @@ def Frm_GST_Report(master, login_id):
 
         # Header row
         headers = [
-            "Sr. No.", "Date", "Invoice no.", "Invoice Summary",
+            "Sr. No.", "Date", "Invoice no.",
             "Customer name", "Amount excluding GST", "IGST", "CGST", "Total GST"
         ]
         ws.append(headers)
@@ -80,7 +80,7 @@ def Frm_GST_Report(master, login_id):
             data = []
             cnt1 = 1
             for i in data1:
-                data.append([cnt1, datetime.strftime(data1[0][0], '%Y-%m-%d'), i[1], "", i[2], i[3], i[4], i[5], i[6]])
+                data.append([cnt1, datetime.strftime(data1[0][0], '%Y-%m-%d'), i[1], i[2], i[3], i[4], i[5], i[6]])
                 cnt1 += 1
             path = r"D:\\ToolCosting\\Support Documents\\GST.xlsx"
             messagebox.showinfo("Info", "Report Generate Successfully. Click Ok to open.", parent=frm_report)
@@ -100,6 +100,7 @@ def Frm_GST_Report(master, login_id):
     LblFrom.place(x=90, y=80)
     TxtFrom = DateEntry(frm_report, width=12, font=('Times New Roman', 18), borderwidth=2, date_pattern="dd-mm-yyyy")
     TxtFrom.place(x=190, y=80)
+    TxtFrom.focus_set()
 
     LblTo = Label(frm_report, text='To', font=('Times New Roman', 18))
     LblTo.place(x=90, y=150)

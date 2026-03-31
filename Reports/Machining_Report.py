@@ -129,7 +129,7 @@ def Frm_Machining_Report(master, login_id):
         cnt = 1
         if data1:
             for i in data1:
-                sql2 = f"SELECT machining_name, cust_rate, total_hr FROM quotation_master_details_machining_details WHERE '{n1}' AND part_no_id = '{i[0]}'"
+                sql2 = f"SELECT machining_name, cust_rate, total_hr FROM quotation_master_details_machining_details WHERE Quotation_Id = '{n1}' AND part_no_id = '{i[0]}'"
                 db_cursor.execute(sql2)
                 data2 = db_cursor.fetchall()
                 
@@ -157,8 +157,8 @@ def Frm_Machining_Report(master, login_id):
     def Generate_Report():
         n1 = TxtQuot.get()
         path = r"D:\\ToolCosting\\Support Documents\\Machining_Report.xlsx"
-        print(n1)
-        print(check_excel_open(path))
+        #print(n1)
+        #print(check_excel_open(path))
         if n1:
             if check_excel_open(path):
                 Frm_Machining_Report_Excel(n1, path)

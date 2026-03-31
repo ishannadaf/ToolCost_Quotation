@@ -5,19 +5,27 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from tkinter import *
 import ast
-
+from tkinter import messagebox
 # Register font
 pdfmetrics.registerFont(TTFont('DejaVuSans', r"D:\\ToolCosting\\SupportFiles\\DejaVuSans.ttf"))
 base_font = "DejaVuSans"
 BLUE = colors.HexColor("#2F5597")
+import os
 
-def currency(x):
-    return f"{round(float(x)):,}.00"
-
-def create_quotation_pdf(data, filename, pdf_type):
+def create_quotation_pdf(data, filename, pdf_type, master):
+    messagebox.showinfo("Info", f"Opening your {pdf_type}...Click Ok.", parent=master)
+    
     if isinstance(data, str):
         data = ast.literal_eval(data)
+    
+    po_no = ''
+    if data['po_no'] == '':
+        po_no = '--'
+    else:
+        po_no = data['po_no']
+    #print("PO NUMBER:", data['po_no'])
     doc = SimpleDocTemplate(filename, pagesize=A4,
                             leftMargin=20*mm, rightMargin=20*mm,
                             topMargin=15*mm, bottomMargin=15*mm)
@@ -39,21 +47,31 @@ def create_quotation_pdf(data, filename, pdf_type):
 
     header_table = Table([
         [Paragraph(f"<b>{data['company']['name']}</b>", company_style),
-         Paragraph(f"<b><font color='#2F5597' size=16>{pdf_type}</font></b>", normal)]
+        Paragraph(f"<b><font color='#2F5597' size=16>{pdf_type}</font></b>", normal)]
     ], colWidths=[120*mm, 60*mm])
     header_table.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"MIDDLE")]))
     elements.append(header_table)
     elements.append(Spacer(1,8))
 
     # --- Company Info & Quote Info ---
-    company_info = f"""{data['company']['address']}<br/>
-Phone: {data['company']['phone']}<br/>
-Prepared by: {data['prepared_by']}"""
+    
+    address = data['company']['address'].replace("\n", " ")
+
+    if len(address) > 50:
+        split_index = address.rfind(" ", 0, 50)
+        if split_index == -1:
+            split_index = 50
+        address = address[:split_index] + "<br/>" + address[split_index+1:]
+    company_info = f"""
+        {address}<br/>
+        Phone : {data['company']['phone']}<br/>
+        <br/>
+        """
 
     right_box = [
         ["DATE", data['date']],
         [f"{pdf_type.upper()} ID", data['quote_no']],
-        ["PO NUMBER", data.get('po_no','N/A')],
+        ["PO NUMBER", po_no],
         ["VALID UNTIL", data['valid_until']]
     ]
     right_table = Table(right_box, colWidths=[35*mm,40*mm])
@@ -61,8 +79,24 @@ Prepared by: {data['prepared_by']}"""
         ("GRID",(0,0),(-1,-1),0.5,colors.black),
         ("ALIGN",(1,0),(1,-1),"CENTER")
     ]))
+    
+    right_wrapper = Table([[right_table]], colWidths=[55*mm])
+    right_wrapper.setStyle(TableStyle([
+        ("ALIGN", (0,0), (-1,-1), "RIGHT")
+    ]))
 
-    header2 = Table([[Paragraph(company_info, small), right_table]], colWidths=[110*mm,55*mm])
+    header2 = Table(
+        [[Paragraph(company_info, small), right_wrapper]],
+        colWidths=[110*mm, 55*mm],
+        hAlign="LEFT"
+    )
+
+    header2.setStyle(TableStyle([
+        ("VALIGN", (0,0), (-1,-1), "TOP"),
+        ("LEFTPADDING", (0,0), (-1,-1), 5),
+        ("RIGHTPADDING", (0,0), (-1,-1), 5),
+        ("ALIGN", (1,0), (1,0), "RIGHT"),  # ⭐ Push right table properly
+    ]))
     elements.append(header2)
     elements.append(Spacer(1,10))
 
@@ -86,13 +120,13 @@ Prepared by: {data['prepared_by']}"""
         items.append([
             str(row['no']),
             row['part_desc'],
-            currency(row['unit_price']),
+            str(row['unit_price']),
             str(row['qty']),
             # row.get("taxed",""),
-            currency(row['total_price'])
+            str(row['total_price'])
         ])
 
-    item_table = Table(items, colWidths=[15*mm,60*mm,25*mm,20*mm,35*mm], repeatRows=1)
+    item_table = Table(items, colWidths=[15*mm,70*mm,25*mm,20*mm,35*mm], repeatRows=1)
     item_table.setStyle(TableStyle([
         ("GRID",(0,0),(-1,-1),0.25,colors.black),
         ("BACKGROUND",(0,0),(-1,0),BLUE),
@@ -107,12 +141,10 @@ Prepared by: {data['prepared_by']}"""
 
     # --- TOTALS ---
     totals = [
-        ["Subtotal (Rs.)", currency(data['totals']['subtotal'])],
-        ["Taxable (Rs.)", currency(data['totals']['taxable'])],
-        ["Tax rate (%)", f"{data['totals']['tax_rate']}%"],
-        ["Tax due (Rs.)", currency(data['totals']['tax_due'])],
-        # ["Other", currency(data['totals']['other'])],
-        ["TOTAL (Rs.)", currency(data['totals']['grand_total'])]
+        ["Subtotal (Rs.)", str(data['totals']['subtotal'])],
+        ["Tax rate (%)", f"{data['totals']['tax_rate']}"],
+        ["Tax due (Rs.)", str(data['totals']['tax_due'])],
+        ["TOTAL (Rs.)", str(data['totals']['grand_total'])]
     ]
     total_table = Table(totals, colWidths=[50*mm,35*mm], hAlign="RIGHT")
     total_table.setStyle(TableStyle([
@@ -139,16 +171,21 @@ Prepared by: {data['prepared_by']}"""
     elements.append(terms_table)
     elements.append(Spacer(1,15))
 
+    elements.append(Paragraph("Regards,", small))
+    elements.append(Spacer(1,20))
+    elements.append(Paragraph(data['company']['name'], normal))
+
     # --- FOOTER ---
-    elements.append(Paragraph("Customer Acceptance (sign below):", small))
-    elements.append(Spacer(1,20))
-    elements.append(Paragraph("x ___________________________________________", normal))
-    elements.append(Paragraph("Print Name:", normal))
-    elements.append(Spacer(1,20))
-    elements.append(Paragraph("<i>Thank You For Your Business!</i>", normal))
+    # elements.append(Paragraph("Customer Acceptance (sign below):", small))
+    # elements.append(Spacer(1,20))
+    # elements.append(Paragraph("x ___________________________________________", normal))
+    # elements.append(Paragraph("Print Name:", normal))
+    # elements.append(Spacer(1,20))
+    # elements.append(Paragraph("<i>Thank You For Your Business!</i>", normal))
 
     doc.build(elements)
-
+    
+    os.startfile(r"D:\\ToolCosting\\Support Documents\\Tool_Quotation.pdf")
 
 # -------------------------------
 # SAMPLE DATA FOR TESTING

@@ -41,7 +41,7 @@ def generate_license_key(hwcode: str, from_date: datetime | None = None, days_va
 
 
 def Main_Function(hwcode, days_str):
-    print("=== License Key Generator ===")
+    #print("=== License Key Generator ===")
     if days_str == "":
         days = 365
     else:

@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import font
 from Masters.Account_Master import Frm_Account_Master
 from Masters.Gst_Master import Frm_Gst_Percentage
+from Masters.Profit_Percentage import Frm_Profit_Per_Master
 from Masters.Raw_Material import Frm_Raw_Master
 from Masters.Reset_Password import Frm_Reset_Password
 from Quotation.NewInvoice import Frm_New_Invoice
@@ -41,16 +42,20 @@ except Exception as e:
 
 def Dashboard(login_id):
     def open_single_window(key, window_func, *args):
-        # print(f"Opening window: {key}")
-        if key in open_windows:
+
+        global open_windows
+
+        # Close all existing windows first
+        for k, win in list(open_windows.items()):
             try:
-                if open_windows[key].winfo_exists():
-                    open_windows[key].lift()
-                    open_windows[key].focus_force()
-                    return
+                if win.winfo_exists():
+                    win.destroy()
             except:
                 pass
 
+            del open_windows[k]
+
+        # Open new window
         win = window_func(*args)
         open_windows[key] = win
 
@@ -150,6 +155,7 @@ def Dashboard(login_id):
             ("Customer Details", lambda: open_single_window("account_master", Frm_Account_Master, dash_screen, login_id)),
             ("Machining Library", lambda: open_single_window("Machining_Library", Frm_Machining_Master,dash_screen)),
             ("Material Details", lambda: open_single_window("material_master", Frm_material_master, dash_screen)),
+            ("Percentage & Profit", lambda: open_single_window("percentage_profit", Frm_Profit_Per_Master, dash_screen)),
             ("Scrap Details", lambda: open_single_window("raw_master", Frm_Raw_Master, dash_screen)),
             ("GST Details", lambda: open_single_window("gst_master", Frm_Gst_Percentage, dash_screen))
         ]
@@ -166,10 +172,6 @@ def Dashboard(login_id):
         quot_menu.add_command(
             label="New",
             command=lambda: open_single_window("tool_master", Frm_Tool_Master, dash_screen, login_id)
-        )
-        quot_menu.add_command(
-            label="History",
-            command=lambda: open_single_window("quot_history", Frm_Quot_History, dash_screen, login_id)
         )
         
         # Attach submenu under "Reports"
@@ -188,11 +190,6 @@ def Dashboard(login_id):
         # Attach submenu under "Reports"
         popup.add_cascade(label="Invoice", menu=quot_menu1)
 
-        popup.add_command(
-            label="Package & Delivery",
-            command=lambda: open_single_window("delivery_master", Frm_Delivery_Master, dash_screen, login_id)
-        )
-
         # 2) Submenu for "Reports"
         reports_menu = tk.Menu(popup, tearoff=0, font=menu_item_font)
         reports_menu.add_command(
@@ -204,6 +201,12 @@ def Dashboard(login_id):
             label="GST File",
             command=lambda: open_single_window("gst_report", Frm_GST_Report, dash_screen, login_id)
         )
+        
+        reports_menu.add_command(
+            label="Challan Report",
+            command=lambda: open_single_window("delivery_master", Frm_Delivery_Master, dash_screen, login_id)
+        )
+        
         reports_menu.add_command(
             label="Quotation Report",
             command=lambda: open_single_window("quotation_report", Frm_Quotation_Report, dash_screen, login_id)
@@ -216,6 +219,13 @@ def Dashboard(login_id):
 
         # Attach submenu under "Reports"
         popup.add_cascade(label="Reports", menu=reports_menu)
+        
+        search_menu = tk.Menu(popup, tearoff=0, font=menu_item_font)
+        search_menu.add_command(
+            label="Search Data",
+            command=lambda: open_single_window("quot_history", Frm_Quot_History, dash_screen, login_id)
+        )
+        popup.add_cascade(label="Search", menu=search_menu)
 
         # Show the popup under the Quotation button
         x = btn.winfo_rootx()

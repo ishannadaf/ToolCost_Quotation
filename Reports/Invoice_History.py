@@ -91,6 +91,7 @@ def Frm_Invoice_Report(master, login_id):
     LblFrom.place(x=90, y=80)
     TxtFrom = DateEntry(frm_report, width=12, font=('Times New Roman', 18), borderwidth=2, date_pattern="dd-mm-yyyy")
     TxtFrom.place(x=190, y=80)
+    TxtFrom.focus_set()
 
     LblTo = Label(frm_report, text='To', font=('Times New Roman', 18))
     LblTo.place(x=90, y=150)

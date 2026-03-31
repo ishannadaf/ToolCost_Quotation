@@ -105,6 +105,10 @@ def Frm_Account_Master(master, login_id):
         pdf_path = LblPdfPath1['text']
         master_id = TxtMasterId['text']
         
+        if len(addr) > 70:
+            messagebox.showerror("Error", "Address should be less characters.", parent = acc_master)
+            return
+        
         if value_exists_in_column(trv, 1, name) and name != '' and contact != '' and providers != '' and BtnSave['text'] == 'Save':
             sql1 = f"INSERT INTO account_master (party_name, provider_names, contact, address, pdf_path, login_id) VALUES ({DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN})"
             db_cursor.execute(sql1, (name, providers, contact, addr, pdf_path, login_id))
@@ -219,10 +223,10 @@ def Frm_Account_Master(master, login_id):
     
     trv["show"]="headings"
 
-    trv.column("no" , width=70, anchor='center')
-    trv.column("company_name" , width=100, anchor='center')
-    trv.column("contact_no" , width=100, anchor='center')
-    trv.column("Address" , width=100, anchor='center')
+    trv.column("no" , width=40, anchor='center')
+    trv.column("company_name" , width=120, anchor='w')
+    trv.column("contact_no" , width=80, anchor='center')
+    trv.column("Address" , width=130, anchor='w')
     #trv.column("Provider" , width=100, anchor='center')
     
     trv.place(x=510, y=70, width=460, height=360)
