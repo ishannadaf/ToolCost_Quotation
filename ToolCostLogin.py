@@ -51,7 +51,7 @@ def Main_Function():
     screen_width = 600
     screen_height = 400
     lst = []
-    image1 = Image.open("D:\ToolCosting\Images\login_background.png")
+    image1 = Image.open(r"D:\\ToolCosting\\Images\\login_background.png")
     resized_image= image1.resize((screen_width,screen_height), Image.LANCZOS)
 
     img = ImageTk.PhotoImage(resized_image)

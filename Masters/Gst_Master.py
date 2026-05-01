@@ -6,9 +6,9 @@ from Database.connection import *
 def Frm_Gst_Percentage(master):
 
     gst_details = Toplevel(master)
-
     gst_details.geometry("400x250+550+250")
     gst_details.title("GST Details")
+    gst_details.resizable(False, False)
 
     def On_start():
         gst_entry.delete(0, END)

@@ -72,7 +72,7 @@ def Frm_Machining_Report(master, login_id):
                 item["sr_no"],
                 item["part_no"],
                 item["desc"],
-                item["rmc"],
+                round(float(item["rmc"])),
             ]
 
             # Add operation values in the same order as 'operations' list
@@ -81,8 +81,8 @@ def Frm_Machining_Report(master, login_id):
                 amt = item["operations"].get(op, 0)
                 op_values.append(amt)  # default 0 if not present
 
-            profit = item["profit"]
-            total = item["rmc"] + sum(op_values) + profit
+            profit = round(float(item["profit"]))
+            total = round(float(item["rmc"]) + sum(op_values) + profit, 2)
 
             row_values.extend(op_values)
             row_values.append(profit)
@@ -169,7 +169,7 @@ def Frm_Machining_Report(master, login_id):
     frm_report.geometry("500x220+500+250")
     frm_report.title("Machining Report")
     frm_report.resizable(False, False)
-    
+    frm_report.resizable(False, False)
     LblHead = Label(frm_report, text='Machining Report', font=('Times New Roman', 22, 'bold'), fg='purple')
     LblHead.pack()
     

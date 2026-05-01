@@ -180,7 +180,7 @@ def Frm_Profit_Per_Master(master):
     machining_master = Toplevel(master)
     machining_master.geometry("650x400+430+175")
     machining_master.title("Machining Master")
-
+    machining_master.resizable(False, False)
     Label(machining_master, text='Profit & Percentage', font=('Times New Roman', 22)).place(x=200, y=10)
 
     Frm1 = LabelFrame(machining_master, width=620, height=320)

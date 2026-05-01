@@ -194,7 +194,7 @@ def Frm_material_master(master):
 
     material_master = Toplevel(master)
     material_master.geometry("600x450+430+175")
-    
+    material_master.resizable(False, False)
     LblHead = Label(material_master, text='Material Master', font=('Times New Roman', 22))
     LblHead.place(x=200, y=10)
     

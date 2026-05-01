@@ -7,7 +7,7 @@ import os
 import tkinter as tk
 from datetime import datetime, timedelta
 from Quotation.Quotation_Master_PDF import create_quotation_pdf
-
+from tkinter import filedialog
 def Frm_New_Invoice(master, login_id):
 
     all_entries = {}
@@ -115,7 +115,7 @@ def Frm_New_Invoice(master, login_id):
         db_cursor.execute(sql, (login_id,))
         rows = db_cursor.fetchall()
 
-        quot_list = []
+        quot_list = ['']
         for r in rows:
             quot_id = r[0]
             item = (r[1], r[2], r[3], r[4], r[5])
@@ -126,6 +126,7 @@ def Frm_New_Invoice(master, login_id):
         entQuotationID.set_completion_list(quot_list)
         if quot_list:
             entQuotationID.current(0)
+            
         inv_no = Invoice_Id_Funct(login_id)
         lblInvoiceNo.config(text=f"Invoice No: {inv_no}")
         
@@ -173,8 +174,8 @@ def Frm_New_Invoice(master, login_id):
 
 
     # ---------------- SHOW INVOICE (PDF) ----------------
-    def Show_Invoice(po_number): 
-        Company_Name, Company_Contact, Company_Address = Get_Firm_Details(login_id) 
+    def Show_Invoice(po_number, terms_data): 
+        Company_Name, Company_Contact, Company_Address, email_id = Get_Firm_Details(login_id) 
         quotation_id = entQuotationID.get() 
         sql1 = f""" select am.party_name, qm.provider_name from account_master am inner join quotation_master qm on am.id = qm.cust_id where qm.quotation_id = '{quotation_id}'; """ 
         db_cursor.execute(sql1) 
@@ -191,17 +192,19 @@ def Frm_New_Invoice(master, login_id):
         gst_per = int(db_cursor.fetchone()[0])
         for child in trv_right.get_children(): 
             vals = trv_right.item(child)["values"] 
-            items.append({ "no": vals[0], "part_desc": vals[2], "qty": int(vals[3]), "unit_price": int(float(vals[4])), "total_price": int(float(vals[5])), "taxed":"" }) 
+            items.append({ "no": vals[1], "part_desc": vals[2], "qty": int(vals[3]), "unit_price": int(float(vals[4])), "total_price": int(float(vals[5])), "taxed":"" }) 
             subtotal += int(float(vals[5])) 
         
         tax_due = int(subtotal*gst_per/100)
         grand_total = subtotal + tax_due 
         
-        terms_data = get_terms_conditions(quotation_id)
+        # terms_data = get_terms_conditions(quotation_id)
         sample = { "company": 
                     { "name":Company_Name, 
                     "address":Company_Address, 
-                    "phone": Company_Contact }, 
+                    "phone": Company_Contact, 
+                    "email": email_id
+                    }, 
                 "date": datetime.today().strftime("%d-%m-%Y"), 
                 "quote_no": invoice_id, 
                 "po_no": po_number,
@@ -220,22 +223,92 @@ def Frm_New_Invoice(master, login_id):
                     "tax_due":tax_due,
                     "other":0,
                     "grand_total":grand_total},
-                "terms":
-                    terms_data}
+                "terms": terms_data}
         if items != []:
-            pdf_path = r"D:\\ToolCosting\\Support Documents\\Tool_Quotation.pdf" 
+            # pdf_path = r"D:\\ToolCosting\\Support Documents\\Tool_Quotation.pdf" 
+            pdf_path = filedialog.asksaveasfilename(
+                    defaultextension=".pdf",
+                    filetypes=[("PDF files", "*.pdf")],
+                    initialfile=f"{invoice_id}.pdf",   # Default file name
+                    title="Save Quotation PDF",
+                    parent=new_quot
+                )
+            
             messagebox.showinfo("Success",f"Invoice is generated successfully...", parent=new_quot) 
-            date_tr = datetime.today().date() 
+            date_tr = datetime.today().date()
             sql_update = f"UPDATE quotation_master SET invoice_id = {DATABASE_SYN}, invoice_tr_date = {DATABASE_SYN}, invoice_generated = {DATABASE_SYN} WHERE quotation_id = {DATABASE_SYN} AND login_id = {DATABASE_SYN}" 
             params = (invoice_id, date_tr, 'Y', quotation_id, login_id) 
             db_cursor.execute(sql_update, params) 
             #db_cursor.execute(sql_update)
             db_connection.commit()
-            create_quotation_pdf(sample, pdf_path, "INVOICE", new_quot) 
+            create_quotation_pdf(sample, pdf_path, "TAX INVOICE", new_quot) 
             # os.startfile(pdf_path) #txtSaveInfo['text'] = '' 
             trv_right.delete(*trv_right.get_children())
             trv_left.delete(*trv_left.get_children())
-    def generate_invoice():
+            On_Start_New_Quot()
+    
+    def generate_invoice_terms():
+        global rules_page
+
+        if trv.get_children():
+            def on_ok_click():
+                global rules_page   # IMPORTANT
+                n1 = TxtRule.get(1.0, END).strip()
+                terms_conditions = []
+                if n1:                
+                    terms_conditions = n1.split('\n')
+                    
+                generate_invoice(terms_conditions)
+
+                rules_page.destroy()
+                rules_page = None   # reset after close
+
+            # ✅ Check if already open
+            # if rules_page is not None and rules_page.winfo_exists():
+            #     rules_page.lift()
+            #     rules_page.focus_force()
+            #     return
+
+            def on_start_rules_page():
+               TxtRule.insert(END, """Transport of meterial included/excluded in scope \nVehicle no. - XXXXXXXXXX""")
+
+            # ✅ Create window only once
+            rules_page = Toplevel(new_quot)
+            rules_page.geometry("550x200+500+300")
+            rules_page.title("Generating PDF")
+
+            # ✅ Handle manual close (VERY IMPORTANT)
+            def on_close():
+                global rules_page
+                rules_page.destroy()
+                rules_page = None
+
+            rules_page.protocol("WM_DELETE_WINDOW", on_close)
+
+            LblRule = Label(rules_page, text="Terms & conditions", font=('Times New Roman', 18))
+            LblRule.place(x=170, y=10)
+
+            TxtRule = Text(rules_page, font=('Times New Roman', 14), width=55, height=4)
+            TxtRule.place(x=20, y=50)
+
+            BtnOk = Button(
+                rules_page,
+                text="OK",
+                width=12,
+                bg='green',
+                fg='white',
+                font=('Times New Roman', 12),
+                command=on_ok_click
+            )
+            BtnOk.place(x=210, y=155)
+
+            on_start_rules_page()
+
+        else:
+            messagebox.showerror("Error", "Please add some records to save.", parent=new_quot)
+    
+    
+    def generate_invoice(terms):
         if not trv_right.get_children():
             messagebox.showerror("Error", "No items selected for invoice", parent=new_quot)
             return
@@ -246,37 +319,46 @@ def Frm_New_Invoice(master, login_id):
             "Enter Purchase Order (PO) Number:",
             parent=new_quot
         )
-
+        
         # If user cancels or leaves empty
         if not po_number:
             messagebox.showwarning("Required", "PO Number is required to generate invoice", parent=new_quot)
             return
-
+        
         inv_no = lblInvoiceNo['text'].split(": ")[1]
         quot_id = entQuotationID.get()
         date_tr = datetime.today().date()
+        
+        sql1 = f"SELECT COUNT(*) FROM invoice_master WHERE po_no = '{po_number}' and quot_id = '{quot_id}'"
+        db_cursor.execute(sql1)
+        data1 = db_cursor.fetchone()[0]
+        if data1 > 0:
+            messagebox.showerror("Error", f"PO No already exists for given QUOTATION NO : {quot_id}", parent=new_quot)
+            return
 
         data = []
+        terms_save = '\n'.join(terms)
         for item in trv_right.get_children():
             vals = trv_right.item(item, "values")
-            data.append((inv_no, quot_id, vals[1], po_number, date_tr, login_id))
+            data.append((inv_no, quot_id, vals[1], po_number, date_tr, terms_save, login_id))
 
         sql = """
         INSERT INTO invoice_master 
-        (invoice_id, quot_id, part_no, po_no, date_tr, login_id)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        (invoice_id, quot_id, part_no, po_no, date_tr, term_conditions, login_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
 
         db_cursor.executemany(sql, data)
         db_connection.commit()
 
         messagebox.showinfo("Success", "Invoice generated successfully", parent=new_quot)
-        Show_Invoice(po_number)
+        Show_Invoice(po_number, terms)
         On_Start_New_Quot()
     # ---------------- UI ----------------
     new_quot = Toplevel(master)
     new_quot.title("New Invoice")
     new_quot.geometry("1050x550+300+120")
+    new_quot.resizable(False, False)
 
     Label(new_quot, text="Create New Invoice",
         font=("Times New Roman", 24, "bold")).place(x=360, y=10)
@@ -332,7 +414,7 @@ def Frm_New_Invoice(master, login_id):
     Button(new_quot, text="Generate Invoice",
         font=("Times New Roman", 16, "bold"),
         bg="green", fg="white",
-        command=generate_invoice).place(x=410, y=500)
+        command=generate_invoice_terms).place(x=440, y=500)
 
     On_Start_New_Quot()
     enable_esc_close(new_quot)

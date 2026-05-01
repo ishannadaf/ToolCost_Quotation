@@ -16,7 +16,7 @@ def Frm_GST_Report(master, login_id):
         # Header row
         headers = [
             "Sr. No.", "Date", "Invoice no.",
-            "Customer name", "Amount excluding GST", "IGST", "CGST", "Total GST"
+            "Customer name", "GST No.", "PO No.", "Amount excluding GST", "SGST", "CGST", "Total GST"
         ]
         ws.append(headers)
 
@@ -61,7 +61,7 @@ def Frm_GST_Report(master, login_id):
         date2 = datetime.strptime(TxtTo.get(), '%d-%m-%Y').strftime('%Y-%m-%d')
 
         sql1 = f"""
-        SELECT qm.invoice_tr_date, qm.invoice_id, am.party_name, 
+        SELECT qm.invoice_tr_date, qm.invoice_id, am.party_name, am.gst_no, im.po_no,
             SUM(qmd.total_price), 
             round(SUM(qmd.total_price)*9/100, 2) as IGST, 
             round(SUM(qmd.total_price)*9/100, 2) as SGST, 
@@ -69,10 +69,11 @@ def Frm_GST_Report(master, login_id):
         FROM quotation_master qm
         inner join account_master am on am.id = qm.cust_id
         inner join quotation_master_details qmd on qmd.Quotation_Id = qm.quotation_id
+        inner join invoice_master im on im.quot_id = qmd.Quotation_Id
         where qm.invoice_tr_date between '{date1}' and '{date2}'
         AND qm.invoice_generated = 'Y'
         AND qm.login_id = '{login_id}'
-        group by qm.invoice_tr_date, qm.invoice_id, am.party_name;
+        group by qm.invoice_tr_date, qm.invoice_id, am.party_name, am.gst_no, im.po_no;
         """
         db_cursor.execute(sql1)
         data1 = db_cursor.fetchall()
@@ -80,7 +81,7 @@ def Frm_GST_Report(master, login_id):
             data = []
             cnt1 = 1
             for i in data1:
-                data.append([cnt1, datetime.strftime(data1[0][0], '%Y-%m-%d'), i[1], i[2], i[3], i[4], i[5], i[6]])
+                data.append([cnt1, datetime.strftime(data1[0][0], '%Y-%m-%d'), i[1], i[2], i[3], i[4], i[5], i[6], i[7], i[8]])
                 cnt1 += 1
             path = r"D:\\ToolCosting\\Support Documents\\GST.xlsx"
             messagebox.showinfo("Info", "Report Generate Successfully. Click Ok to open.", parent=frm_report)
@@ -92,7 +93,7 @@ def Frm_GST_Report(master, login_id):
     frm_report = Toplevel(master)
     frm_report.geometry("500x300+480+220")
     frm_report.title("GST Report")
-
+    frm_report.resizable(False, False)
     LblHead = Label(frm_report, text='GST Report', font=('Times New Roman', 24, 'bold'), fg='purple')
     LblHead.place(x=180, y=10)
 

@@ -206,7 +206,7 @@ def Frm_Raw_Master(master):
 
     machining_master = Toplevel(master)
     machining_master.geometry("600x450+430+175")
-    
+    machining_master.resizable(False, False)
     LblHead = Label(machining_master, text='Scrap Material Cost', font=('Times New Roman', 22))
     LblHead.place(x=170, y=10)
     

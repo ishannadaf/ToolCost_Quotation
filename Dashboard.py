@@ -23,6 +23,7 @@ import sys
 import ctypes
 from tkinter import filedialog, messagebox
 from openpyxl import Workbook
+import subprocess
 from Reports.Quotation_History import Frm_Quotation_Report
 open_windows = {}
 def resource_path(relative_path):
@@ -91,14 +92,11 @@ def Dashboard(login_id):
             ws.title = "Sheet1"
 
             # Add header row (fixed 4-5 columns)
-            headers = ["No", "Part_no", "Part_Desc", "Qty"]
+            headers = ["Sr. No.", "Part No.", "Part Description", "QTY", "Unit Price", "Total Price"]
             ws.append(headers)
             
             sample_data = [
-                [1, "P1001", "Bolt M6", 50],
-                [2, "P1002", "Washer Steel", 200],
-                [3, "P1003", "Hex Nut M8", 150],
-                [4, "P1004", "Screw 5mm", 300],
+                
             ]
 
             # Add sample data to worksheet
@@ -192,6 +190,16 @@ def Dashboard(login_id):
 
         # 2) Submenu for "Reports"
         reports_menu = tk.Menu(popup, tearoff=0, font=menu_item_font)
+        
+        reports_menu.add_command(
+            label="Quotation Report",
+            command=lambda: open_single_window("quotation_report", Frm_Quotation_Report, dash_screen, login_id)
+        )
+        
+        reports_menu.add_command(
+            label="Invoice Report",
+            command=lambda: open_single_window("invoice_report", Frm_Invoice_Report, dash_screen, login_id)
+        )
         reports_menu.add_command(
             label="Machining",
             command=lambda: open_single_window("machining_report", Frm_Machining_Report, dash_screen, login_id)
@@ -207,15 +215,7 @@ def Dashboard(login_id):
             command=lambda: open_single_window("delivery_master", Frm_Delivery_Master, dash_screen, login_id)
         )
         
-        reports_menu.add_command(
-            label="Quotation Report",
-            command=lambda: open_single_window("quotation_report", Frm_Quotation_Report, dash_screen, login_id)
-        )
         
-        reports_menu.add_command(
-            label="Invoice Report",
-            command=lambda: open_single_window("invoice_report", Frm_Invoice_Report, dash_screen, login_id)
-        )
 
         # Attach submenu under "Reports"
         popup.add_cascade(label="Reports", menu=reports_menu)
@@ -235,10 +235,51 @@ def Dashboard(login_id):
         finally:
             popup.grab_release()
 
+    def Backup_Data():
+        
+        # 🔧 CONFIG (change these)
+        DB_USER = "root"
+        DB_PASSWORD = "omicron"
+        DB_NAME = "tool_management"
+        
+        # Fixed backup folder
+        BACKUP_DIR = r"D:\\ToolCosting\\SupportFiles\\Backup"
+
+        # Create folder if not exists
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+
+        # File name with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file = os.path.join(BACKUP_DIR, f"{DB_NAME}_{timestamp}.sql")
+        mysqldump_path = r"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe"
+        try:
+            # 🔥 mysqldump command
+            command = [
+                mysqldump_path,
+                "-u", DB_USER,
+                f"-p{DB_PASSWORD}",
+                "--databases", DB_NAME,              # includes CREATE DATABASE
+                "--add-drop-database",
+                "--add-drop-table",
+                "--routines",
+                "--events",
+                "--triggers"
+            ]
+
+            # Write output to file
+            with open(backup_file, "w", encoding="utf-8") as f:
+                subprocess.run(command, stdout=f, check=True)
+            messagebox.showinfo("Success", f"Backup successful: {backup_file}", parent=dash_screen)
+            print(f"Backup successful: {backup_file}")
+
+        except subprocess.CalledProcessError as e:
+            messagebox.showerror("Error", f"Error while backup : {e}", parent=dash_screen)
+
     def open_help(evt=None, widget=None):
         entries = [
             ("Tool Excel", lambda: download_excel()),# replace with real function if any  
             ("Reset Password", lambda: open_single_window("reset_password", Frm_Reset_Password, dash_screen, login_id)),
+            ("Backup", lambda: Backup_Data()),
             ("Log out", lambda: logout_app()),
         ]
         popup_menu_for(widget or help_btn, entries)

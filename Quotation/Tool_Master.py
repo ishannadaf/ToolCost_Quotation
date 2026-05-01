@@ -15,6 +15,17 @@ import os
 import re
 import ast
 import tkinter
+import sys
+import fitz
+
+
+def get_poppler_path():
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, "poppler", "Library", "bin")
+    else:
+        return os.path.join(os.getcwd(), "poppler", "Library", "bin")
+
+
 class AutocompleteCombobox(ttk.Combobox):
     def set_completion_list(self, completion_list):
             """Use our completion list as our drop down selection menu, arrows move through menu."""
@@ -209,6 +220,33 @@ class MachiningList(tk.Frame):
                     "hours": widgets["hours_entry"].get()            # fetch live value
                 })
         return result
+    
+def open_term_condition():
+    global open_windows
+
+    key = "term_condition"
+
+    if key in open_windows:
+        win = open_windows[key]
+        if win.winfo_exists():
+            win.lift()
+            win.focus_force()
+            return
+
+    win = Toplevel()
+    win.title("Terms & Conditions")
+
+    open_windows[key] = win
+
+    def on_close():
+        if key in open_windows:
+            del open_windows[key]
+        win.destroy()
+
+    win.protocol("WM_DELETE_WINDOW", on_close)
+
+
+rules_page = None
 
 def Frm_Tool_Master(master, login_id):
     def enable_esc_close(window):
@@ -283,7 +321,7 @@ def Frm_Tool_Master(master, login_id):
                     TxtLength['state'] = 'normal'
                     TxtThickNess['state'] = 'normal'
                     LblThickNess['text'] = 'Diameter'
-                    TxtLength['text'] = 'Length'
+                    LblLength['text'] = 'Length'
                 elif val == 'Fabrication':
                     TxtWidth['state'] = 'disabled'
                     TxtLength['state'] = 'normal'
@@ -352,7 +390,7 @@ def Frm_Tool_Master(master, login_id):
                 ListMachiningCost['text'] = s1
                 ListMachiningCostTotal['text'] = 'Total Cost\n'+str(total_sum)+' Rs.'
                 f1_function()
-                
+
             else:
                 material = TxtMaterial.current(0)
                 unit_measurement = TxtUnit.current(0)
@@ -469,14 +507,28 @@ def Frm_Tool_Master(master, login_id):
             if not file_path:
                 return
 
-            pages = convert_from_path(file_path, dpi=150, first_page=1, last_page=1)
-            pdf_image = pages[0]
-
-            pdf_image.thumbnail((300, 500), Image.Resampling.LANCZOS)
-
-            img_tk = ImageTk.PhotoImage(pdf_image)
+            doc = fitz.open(file_path)
+            
+            # pages = convert_from_path(pdf_path, dpi=150, first_page=1, last_page=1, poppler_path=poppler_path)
+            # pdf_image = pages[0]
+            pdf_image = doc.load_page(0)
+            pix = pdf_image.get_pixmap(matrix=fitz.Matrix(1.5, 1.5))
+            # pdf_image.thumbnail((300, 500), Image.Resampling.LANCZOS)
+            # img_tk = ImageTk.PhotoImage(pdf_image)
+            # preview_label.config(image=img_tk)
+            # preview_label.image = img_tk
+            
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            img.thumbnail((300, 500), Image.Resampling.LANCZOS)
+            full_img.set(file_path)
+            img_tk = ImageTk.PhotoImage(img)
             preview_label.config(image=img_tk)
             preview_label.image = img_tk
+            
+            sql1 = f"UPDATE account_master SET pdf_path = '{file_path}' where party_name = '{TxtCustomer.get()}'"
+            db_cursor.execute(sql1)
+            db_connection.commit()
+            
         
         def clear_data_Quo():
             TxtNo.delete(0, END)
@@ -539,10 +591,23 @@ def Frm_Tool_Master(master, login_id):
             
             if pdf_path:
                 try:
-                    pages = convert_from_path(pdf_path, dpi=150, first_page=1, last_page=1)
-                    pdf_image = pages[0]
-                    pdf_image.thumbnail((300, 500), Image.Resampling.LANCZOS)
-                    img_tk = ImageTk.PhotoImage(pdf_image)
+                    # poppler_path = get_poppler_path()
+                    doc = fitz.open(pdf_path)
+                    
+                    # pages = convert_from_path(pdf_path, dpi=150, first_page=1, last_page=1, poppler_path=poppler_path)
+                    # pdf_image = pages[0]
+                    pdf_image = doc.load_page(0)
+                    pix = pdf_image.get_pixmap(matrix=fitz.Matrix(1.5, 1.5))
+                    
+                    # pdf_image.thumbnail((300, 500), Image.Resampling.LANCZOS)
+                    # img_tk = ImageTk.PhotoImage(pdf_image)
+                    # preview_label.config(image=img_tk)
+                    # preview_label.image = img_tk
+                    
+                    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    img.thumbnail((300, 500), Image.Resampling.LANCZOS)
+                    full_img.set(pdf_path)
+                    img_tk = ImageTk.PhotoImage(img)
                     preview_label.config(image=img_tk)
                     preview_label.image = img_tk
                 except Exception as e:
@@ -637,7 +702,9 @@ def Frm_Tool_Master(master, login_id):
             
             selected_machining_list = None
             var_cust_id.set('')
+            s2.set('')
             quotation_master.destroy()
+            
         def check_shape(val):
             TxtWidth.delete(0, END)
             TxtLength.delete(0, END)
@@ -673,7 +740,7 @@ def Frm_Tool_Master(master, login_id):
                 TxtLength['state'] = 'normal'
                 TxtThickNess['state'] = 'normal'
                 LblThickNess['text'] = 'Diameter'
-                TxtLength['text'] = 'Length'
+                LblLength['text'] = 'Length'
             if val == 'Fabrication':
                 TxtWidth['state'] = 'disabled'
                 TxtLength['state'] = 'normal'
@@ -773,13 +840,13 @@ def Frm_Tool_Master(master, login_id):
         
         LblMaterial = Label(Frm2, text='Select Material', font=('Times New Roman', 16))
         LblMaterial.place(x=10, y=95)
-        TxtMaterial = ttk.Combobox(Frm2, font=('Times New Roman', 16), state='readonly', width=12, justify='center')
+        TxtMaterial = ttk.Combobox(Frm2, font=('Times New Roman', 16), state='readonly', width=15, justify='center')
         TxtMaterial.place(x=10, y=140)
         
         LblUnit = Label(Frm2, text='Unit of Measure', font=('Times New Roman', 16))
-        LblUnit.place(x=220, y=95)
-        TxtUnit = ttk.Combobox(Frm2, font=('Times New Roman', 16), state='readonly', values=('mm', 'cm', 'inch'), justify='center', width=12)
-        TxtUnit.place(x=220, y=140)
+        LblUnit.place(x=240, y=95)
+        TxtUnit = ttk.Combobox(Frm2, font=('Times New Roman', 16), state='readonly', values=('mm', 'cm', 'inch'), justify='center', width=15)
+        TxtUnit.place(x=240, y=140)
         TxtUnit.current(0)
         
         
@@ -795,9 +862,9 @@ def Frm_Tool_Master(master, login_id):
         ]
         
         LblShape = Label(Frm2, text='Select Shape', font=('Times New Roman', 16))
-        LblShape.place(x=420, y=95)
+        LblShape.place(x=470, y=95)
         TxtShape = ImageComboBox(Frm2, items, command=lambda val: check_shape(val))
-        TxtShape.place(x=420, y=140)
+        TxtShape.place(x=460, y=140)
 
         LblThickNess = Label(Frm4, text='Thickness', font=('Times New Roman', 16))
         LblThickNess.place(x=10, y=5)
@@ -942,13 +1009,13 @@ def Frm_Tool_Master(master, login_id):
                 weight = float(TxtUnitWeight['text'].split(' ')[0])
                 scrab_cost = float(TxtScrabCost['text'].split(' ')[0])
                 scrab = TxtScrabPer.get()
-                if scrab_cost == 0.0:
-                    TxtScrabPer.delete(0, END)
-                    TxtScrabPer.insert(0, '0')
-                    scrab = 0
-                if scrab == 0:
-                    scrab = 1
-                scrab_amt = round(scrab_per * weight * scrab_cost, 2)/100
+                # if scrab_cost == 0.0:
+                #     TxtScrabPer.delete(0, END)
+                #     TxtScrabPer.insert(0, '0')
+                #     scrab = 0
+                # if scrab == 0:
+                #     scrab = 0
+                scrab_amt = round(scrab_per * weight * scrab_cost/100, 2)
                 
                 TxtScrabTotal['text'] = str(scrab_amt) + ' Rs.'
 
@@ -998,6 +1065,63 @@ def Frm_Tool_Master(master, login_id):
         def f13(event):
             TxtWidth.focus()
         
+        def open_image_window(pdf_path):
+            if not pdf_path:
+                messagebox.showwarning("Warning", "No PDF available for preview.", parent=quotation_master)
+                return
+
+            try:
+                os.startfile(pdf_path)  # Open PDF with default viewer
+                # doc = fitz.open(pdf_path)
+                # page = doc.load_page(0)
+                # pix = page.get_pixmap(matrix=fitz.Matrix(1.3,1.3))
+
+                # img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
+                # # 🔥 Create window
+                # img_window = Toplevel(quotation_master)
+                # img_window.title("PDF Preview")
+                # img_window.geometry("900x700")  # fixed window size (important)
+
+                # # 🔥 Canvas
+                # canvas = tk.Canvas(img_window)
+                # canvas.pack(side="left", fill="both", expand=True)
+
+                # # 🔥 Scrollbars
+                # v_scroll = tk.Scrollbar(img_window, orient="vertical", command=canvas.yview)
+                # v_scroll.pack(side="right", fill="y")
+
+                # h_scroll = tk.Scrollbar(img_window, orient="horizontal", command=canvas.xview)
+                # h_scroll.pack(side="bottom", fill="x")
+
+                # canvas.configure(yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
+
+                # # 🔥 Image
+                # img_tk = ImageTk.PhotoImage(img)
+                # canvas.create_image(0, 0, anchor="nw", image=img_tk)
+                # canvas.image = img_tk  # prevent garbage collection
+
+                # # 🔥 Scroll region
+                # canvas.config(scrollregion=canvas.bbox("all"))
+
+                # # 🔥 Mouse drag (move image)
+                # def on_click(event):
+                #     canvas.scan_mark(event.x, event.y)
+
+                # def on_drag(event):
+                #     canvas.scan_dragto(event.x, event.y, gain=1)
+
+                # canvas.bind("<ButtonPress-1>", on_click)
+                # canvas.bind("<B1-Motion>", on_drag)
+
+                # # 🔥 Mouse wheel scroll
+                # canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+
+                # enable_esc_close(img_window)
+
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to open PDF preview: {str(e)}", parent=quotation_master)
+        full_img = StringVar()
         TxtWidth.bind('<KeyRelease>', f1)
         TxtLength.bind('<KeyRelease>',f1)
         TxtThickNess.bind('<KeyRelease>',f1)
@@ -1009,7 +1133,7 @@ def Frm_Tool_Master(master, login_id):
         TxtMaterial.bind('<<ComboboxSelected>>', f1)
         TxtUnit.bind('<<ComboboxSelected>>',f1)
         TxtScrabPer.bind('<KeyRelease>', f111)
-        
+        preview_label.bind('<Button-1>', lambda e: open_image_window(full_img.get()))
         
         On_Start_Quo()
         if data_update:
@@ -1022,14 +1146,14 @@ def Frm_Tool_Master(master, login_id):
         # quotation_master.mainloop()
     
     def Open_File():
-        file_path = filedialog.askopenfilename(
-            title="Select an Excel File",
-            filetypes=(("Excel Files", "*.xlsx;*.xls"), ("All Files", "*.*")),
-            parent=tool_master
-        )
-        if file_path:
-            try:
-                wb = load_workbook(file_path)
+        try:
+            file_path = filedialog.askopenfilename(
+                title="Select an Excel File",
+                filetypes=(("Excel Files", "*.xlsx;*.xls"), ("All Files", "*.*")),
+                parent=tool_master
+            )
+            if file_path:
+                wb = load_workbook(file_path, data_only=True)
                 sheet = wb.active  # get active sheet
                 trv.delete(*trv.get_children())
                 unit_price = 0.0
@@ -1039,9 +1163,9 @@ def Frm_Tool_Master(master, login_id):
                         continue
                     trv.insert("", 'end', text=str(row[0]), values=(str(row[0]), str(row[1]), row[2], row[3], unit_price if not row[4] else row[4], total_price if not row[5] else row[5]))
                 On_Start_Tool_Master()
-            except Exception as e:
-                print("Error:", e)
-    
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open file: {str(e)}", parent=tool_master)
     def clear_data():
         TxtNo.delete(0, END)
         TxtPartDesc.delete(0, END)
@@ -1052,6 +1176,8 @@ def Frm_Tool_Master(master, login_id):
     def On_Start_Tool_Master():
         #clear_data()
         BtnSave['state'] = 'normal'
+        BtnSave['text'] = 'Save'
+        var_quot.set('')
         TxtNo.delete(0, END)
         TxtPartDesc.delete(0, END)
         TxtQty.delete(0, END)
@@ -1124,7 +1250,7 @@ def Frm_Tool_Master(master, login_id):
                 if not po_number:
                     messagebox.showwarning("Required", "PO Number is required to generate invoice", parent=tool_master)
                     return
-            Company_Name, Company_Contact, Company_Address = Get_Firm_Details(login_id)
+            Company_Name, Company_Contact, Company_Address, email_id = Get_Firm_Details(login_id)
             customer_name = TxtCustomer1.get()
             party_name, contact, address, mid = Customer_Details(customer_name, login_id)
             provider_name = TxtProv.get()
@@ -1146,7 +1272,7 @@ def Frm_Tool_Master(master, login_id):
             for child in trv.get_children():
                 vals = trv.item(child)["values"]
                 items.append({
-                    "no": vals[0],
+                    "no": vals[1],
                     "part_desc": vals[2],
                     "qty": int(vals[3]),
                     "unit_price": int(float(vals[4])),
@@ -1161,7 +1287,8 @@ def Frm_Tool_Master(master, login_id):
                 "company": {
                     "name":Company_Name,
                     "address":Company_Address,
-                    "phone": Company_Contact
+                    "phone": Company_Contact,
+                    "email": email_id
                 },
                 "date": datetime.today().strftime("%d-%m-%Y"),
                 "quote_no": quotation_id if no == 1 else invoice_id,
@@ -1180,7 +1307,15 @@ def Frm_Tool_Master(master, login_id):
             }
 
             if items != []:
-                pdf_path = r"D:\\ToolCosting\\Support Documents\\Tool_Quotation.pdf"
+                # pdf_path = r"D:\\ToolCosting\\Support Documents\\Tool_Quotation.pdf"
+                pdf_name = quotation_id if no == 1 else invoice_id
+                pdf_path = filedialog.asksaveasfilename(
+                    defaultextension=".pdf",
+                    filetypes=[("PDF files", "*.pdf")],
+                    initialfile=f"{pdf_name}.pdf",   # Default file name
+                    title="Save PDF",
+                    parent=tool_master
+                )
                 if no == 1:
                     #messagebox.showinfo("Success",f"QUOTATION is generated successfully...", parent=tool_master)
                     create_quotation_pdf(sample, pdf_path, "QUOTATION", tool_master)
@@ -1206,7 +1341,7 @@ def Frm_Tool_Master(master, login_id):
                     
                     db_connection.commit()
                     var_quot.set('')
-                    create_quotation_pdf(sample, pdf_path, "INVOICE", tool_master)
+                    create_quotation_pdf(sample, pdf_path, "TAX INVOICE", tool_master)
 
                 os.startfile(pdf_path)
                 #txtSaveInfo['text'] = ''
@@ -1217,175 +1352,204 @@ def Frm_Tool_Master(master, login_id):
             messagebox.showerror("Error", "Please save/update first.",parent = tool_master)
 
     def save_quotation():
-        
-        def on_ok_click():
-            n1 = TxtRule.get(1.0, END).strip()
-            terms_conditions = []
-            if n1:                
-                terms_conditions = n1.split('\n')
-                
-            Save_Data_Quotation(terms_conditions)
-            rules_page.destroy()
-        
-        if trv.get_children():    
+        global rules_page
+
+        if trv.get_children():
+            def on_ok_click():
+                global rules_page   # IMPORTANT
+                n1 = TxtRule.get(1.0, END).strip()
+                terms_conditions = []
+                if n1:                
+                    terms_conditions = n1.split('\n')
+                    
+                Save_Data_Quotation(terms_conditions)
+
+                rules_page.destroy()
+                rules_page = None   # reset after close
+
+            # ✅ Check if already open
+            # if rules_page is not None and rules_page.winfo_exists():
+            #     rules_page.lift()
+            #     rules_page.focus_force()
+            #     return
+
             def on_start_rules_page():
                 terms_conditions = get_terms_conditions(var_quot.get())
+                TxtRule.delete(1.0, END)
+
                 if terms_conditions:
-                    TxtRule.delete(1.0, END)
                     str_rules = "\n".join(terms_conditions)
                     TxtRule.insert(END, str_rules)
                 else:
-                    TxtRule.insert(END, """1) Customer will be billed after indication acceptance of this quote.\n2) Quotation will be valid for next 30 days.\n3) Please mail signed copy of quotation to company mail id or company address.""")
-            
+                    TxtRule.insert(END, """1) Customer will be billed after acceptance of this quote.\n2) Quotation will be valid for next 30 days.\n3) Please mail signed copy of quotation to company mail ID.\n4) Payment terms - 50% Advance and 50% plus GST payable within 45 days from date of invoice.\n5) Delivery time - 30 days.""")
+
+            # ✅ Create window only once
             rules_page = Toplevel(tool_master)
             rules_page.geometry("550x250+500+300")
             rules_page.title("Generating PDF")
+
+            # ✅ Handle manual close (VERY IMPORTANT)
+            def on_close():
+                global rules_page
+                rules_page.destroy()
+                rules_page = None
+
+            rules_page.protocol("WM_DELETE_WINDOW", on_close)
+
             LblRule = Label(rules_page, text="Terms & conditions", font=('Times New Roman', 18))
             LblRule.place(x=170, y=20)
+
             TxtRule = Text(rules_page, font=('Times New Roman', 14), width=55, height=7)
             TxtRule.place(x=20, y=60)
-            
-            BtnOk = Button(rules_page, text="OK", width=12, bg='green', fg='white', font=('Times New Roman', 12), command=on_ok_click)
+
+            BtnOk = Button(
+                rules_page,
+                text="OK",
+                width=12,
+                bg='green',
+                fg='white',
+                font=('Times New Roman', 12),
+                command=on_ok_click
+            )
             BtnOk.place(x=170, y=210)
+
             on_start_rules_page()
 
-            # rules_page.mainloop()
         else:
             messagebox.showerror("Error", "Please add some records to save.", parent=tool_master)
     
     def Save_Data_Quotation(terms_conditions):
-        ans = messagebox.askyesno("Warning", "Once you save the data you can't edit. You want to continue?", parent=tool_master)
-        if ans:
-            customer_name = TxtCustomer1.get()
-            party_name, contact, address, mid = Customer_Details(customer_name, login_id)
-            provider_name = TxtProv.get()
-            if BtnSave['text'] == 'SAVE':
-                quotation_id = Quotation_Id_Funct(login_id)
-            else:
-                quotation_id = var_quot.get()
-            date_tr_quot = datetime.now().date()
+    
+        customer_name = TxtCustomer1.get()
+        party_name, contact, address, mid = Customer_Details(customer_name, login_id)
+        provider_name = TxtProv.get()
+        if BtnSave['text'].lower() == 'save':
+            quotation_id = Quotation_Id_Funct(login_id)
+        else:
+            quotation_id = var_quot.get()
+        date_tr_quot = datetime.now().date()
 
-            cnt = 0
-            flag = False
+        cnt = 0
+        flag = False
+        for child in trv.get_children():
+            vals = trv.item(child)["values"]
+            if int(float(vals[4])) != 0 and int(float(vals[5])) != 0:
+                flag = True
+            else:
+                flag = False
+                break
+        
+        #if flag:
+        # else:
+        #     table_names = ['quotation_master_details_machining_details_u', 'quotation_master_details_u', 'quotation_master_u']
+        flag2 = True
+        if not flag:
+            msg1 = messagebox.askyesno("Warning", "All part's are not updated. Do you want to continue?.\nYou have to update the quotation from UPDATE tab.", parent=tool_master)
+            if msg1:
+                flag2 = True
+            else:
+                flag2 = False
+        if flag2:
+            qmd_items = []
+            qmd_items_update = []
+            qmdmd_item = []
+            qmdmd_item_update = []
             for child in trv.get_children():
                 vals = trv.item(child)["values"]
-                if int(float(vals[4])) != 0 and int(float(vals[5])) != 0:
-                    flag = True
-                else:
-                    flag = False
-                    break
-            
-            #if flag:
-            # else:
-            #     table_names = ['quotation_master_details_machining_details_u', 'quotation_master_details_u', 'quotation_master_u']
-            flag2 = True
-            if not flag:
-                msg1 = messagebox.askyesno("Warning", "All part's are not updated. Do you want to continue?.\nYou have to update the quotation from UPDATE tab.", parent=tool_master)
-                if msg1:
-                    flag2 = True
-                else:
-                    flag2 = False
-            if flag2:
-                qmd_items = []
-                qmd_items_update = []
-                qmdmd_item = []
-                qmdmd_item_update = []
-                for child in trv.get_children():
-                    vals = trv.item(child)["values"]
-                    part_no = vals[1]
-                    part_desc = vals[2]
-                    part_qty = int(vals[3])
-                    unit_price = round(float(vals[4]), 2)
-                    total_price = round(float(vals[5]), 2)
-                    if len(vals)>6 and ast.literal_eval(vals[6]):
-                        str_json = ast.literal_eval(vals[6])
-                        material = str_json["material"]
-                        unit_measurement = str_json["unit_measurement"]
-                        shape = str_json["shape"]
-                        try:
-                            width = float(str_json["width"])
-                        except:
-                            width = 0 
-                        try:
-                            Length = float(str_json["length"])
-                        except:
-                            Length = 0
-                        try:
-                            Thickness = float(str_json["thickness"])
-                        except:
-                            Thickness = 0
-                        try:
-                            Rmc = float(str_json["rmc"])
-                        except:
-                            Rmc = 0
-                        try:
-                            profit_per = var_percentage.get()
-                        except:
-                            profit_per = 0
-                        try:
-                            scrab_per = float(str_json["scrab_per"])
-                        except:
-                            scrab_per = 0
-                        try:
-                            Weight = float(str_json["unit_weight"])
-                        except:
-                            Weight = 0
-                        try:
-                            machining_lst = str_json["machining_lst"]
-                        except:
-                            machining_lst = {}
-                        
-                    else:
-                        material = ''
-                        unit_measurement = ''
-                        shape = ''
-                        width = 0
+                part_no = vals[1]
+                part_desc = vals[2]
+                part_qty = int(vals[3])
+                unit_price = round(float(vals[4]), 2)
+                total_price = round(float(vals[5]), 2)
+                if len(vals)>6 and ast.literal_eval(vals[6]):
+                    str_json = ast.literal_eval(vals[6])
+                    material = str_json["material"]
+                    unit_measurement = str_json["unit_measurement"]
+                    shape = str_json["shape"]
+                    try:
+                        width = float(str_json["width"])
+                    except:
+                        width = 0 
+                    try:
+                        Length = float(str_json["length"])
+                    except:
                         Length = 0
+                    try:
+                        Thickness = float(str_json["thickness"])
+                    except:
                         Thickness = 0
+                    try:
+                        Rmc = float(str_json["rmc"])
+                    except:
                         Rmc = 0
+                    try:
+                        profit_per = var_percentage.get()
+                    except:
                         profit_per = 0
+                    try:
+                        scrab_per = float(str_json["scrab_per"])
+                    except:
                         scrab_per = 0
+                    try:
+                        Weight = float(str_json["unit_weight"])
+                    except:
                         Weight = 0
+                    try:
+                        machining_lst = str_json["machining_lst"]
+                    except:
                         machining_lst = {}
-                    if machining_lst:
-                        for key, item in machining_lst.items():
-                            qmdmd_item.append([quotation_id, part_no, item['machining_name'], item['lbl_rate'], item['cust_rate'], item['total_hr'], date_tr_quot, login_id])
-                            qmdmd_item_update.append([part_no, item['machining_name'], item['lbl_rate'], item['cust_rate'], item['total_hr'], date_tr_quot, login_id, var_quot.get()])
-                    qmd_items.append([quotation_id, part_no, part_desc, part_qty, material, unit_measurement, shape, width, Length, Thickness, Weight, Rmc, profit_per, scrab_per, unit_price, total_price, date_tr_quot, login_id])
-                    qmd_items_update.append([part_no, part_desc, part_qty, material, unit_measurement, shape, width, Length, Thickness, Weight, Rmc, profit_per, scrab_per, unit_price, total_price, date_tr_quot, login_id, var_quot.get()])
-                if qmdmd_item != []:
-                    if BtnSave['text'] == 'UPDATE':
-                        sql_update = f"DELETE FROM quotation_master_details_machining_details WHERE login_id = '{login_id}' AND Quotation_Id = '{var_quot.get()}'"
-                        db_cursor.execute(sql_update)
-                    #elif BtnSave['text'] == 'SAVE':
-                    sql1 = f"INSERT INTO quotation_master_details_machining_details (Quotation_Id, part_no_id, machining_name, lbl_rate, cust_rate, total_hr, date_tr, login_id) VALUES ({DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN})"
-                    db_cursor.executemany(sql1, qmdmd_item)
-
-                if BtnSave['text'] == 'UPDATE':
-                    sql_delete = f"DELETE FROM quotation_master_details WHERE login_id = '{login_id}' AND Quotation_Id = '{var_quot.get()}'"
-                    db_cursor.execute(sql_delete)
-                #elif BtnSave['text'] == 'SAVE':
-                sql2 = f"INSERT INTO quotation_master_details (Quotation_Id, part_no, part_desc, part_qty, material, unit_measurement, shape, width, length_part, thickness, unit_weight, rmc, profit_per, scrab_per, unit_price, total_price, date_tr, login_id) VALUES ({DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN})"
-                db_cursor.executemany(sql2, qmd_items)
-                
-                if BtnSave['text'] == 'UPDATE':
-                    sql_delete = f"DELETE FROM quotation_master WHERE login_id = '{login_id}' AND quotation_id = '{var_quot.get()}'"
-                    db_cursor.execute(sql_delete)
-
-                #if BtnSave['text'] == 'SAVE':    
-                sql3 = f"INSERT INTO quotation_master (quotation_id, cust_id, cust_name, provider_name, date_tr_quot, invoice_generated, login_id, terms_conditions) VALUES ({DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN})"
-                db_cursor.execute(sql3, (quotation_id, mid, party_name, provider_name, date_tr_quot, 'N', login_id, '\n'.join(terms_conditions)))
-                db_connection.commit()
-                
-                messagebox.showinfo("Success", "Data saved successfully.",parent=tool_master)
-                BtnSave['text'] = 'Save'
-                txtSaveInfo['text'] = ''
-                if flag:
-                    txtSaveInfo['text'] = 'Done'
-                    var_quot.set(quotation_id)
+                    
                 else:
-                    reset_form_quot_unsaved_data()
-                BtnSave['state'] = 'disabled'    
+                    material = ''
+                    unit_measurement = ''
+                    shape = ''
+                    width = 0
+                    Length = 0
+                    Thickness = 0
+                    Rmc = 0
+                    profit_per = 0
+                    scrab_per = 0
+                    Weight = 0
+                    machining_lst = {}
+                if machining_lst:
+                    for key, item in machining_lst.items():
+                        qmdmd_item.append([quotation_id, part_no, item['machining_name'], item['lbl_rate'], item['cust_rate'], item['total_hr'], date_tr_quot, login_id])
+                        qmdmd_item_update.append([part_no, item['machining_name'], item['lbl_rate'], item['cust_rate'], item['total_hr'], date_tr_quot, login_id, var_quot.get()])
+                qmd_items.append([quotation_id, part_no, part_desc, part_qty, material, unit_measurement, shape, width, Length, Thickness, Weight, Rmc, profit_per, scrab_per, unit_price, total_price, date_tr_quot, login_id])
+                qmd_items_update.append([part_no, part_desc, part_qty, material, unit_measurement, shape, width, Length, Thickness, Weight, Rmc, profit_per, scrab_per, unit_price, total_price, date_tr_quot, login_id, var_quot.get()])
+            if qmdmd_item != []:
+                if BtnSave['text'] == 'UPDATE':
+                    sql_update = f"DELETE FROM quotation_master_details_machining_details WHERE login_id = '{login_id}' AND Quotation_Id = '{var_quot.get()}'"
+                    db_cursor.execute(sql_update)
+                #elif BtnSave['text'] == 'SAVE':
+                sql1 = f"INSERT INTO quotation_master_details_machining_details (Quotation_Id, part_no_id, machining_name, lbl_rate, cust_rate, total_hr, date_tr, login_id) VALUES ({DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN})"
+                db_cursor.executemany(sql1, qmdmd_item)
+
+            if BtnSave['text'] == 'UPDATE':
+                sql_delete = f"DELETE FROM quotation_master_details WHERE login_id = '{login_id}' AND Quotation_Id = '{var_quot.get()}'"
+                db_cursor.execute(sql_delete)
+            #elif BtnSave['text'] == 'SAVE':
+            sql2 = f"INSERT INTO quotation_master_details (Quotation_Id, part_no, part_desc, part_qty, material, unit_measurement, shape, width, length_part, thickness, unit_weight, rmc, profit_per, scrab_per, unit_price, total_price, date_tr, login_id) VALUES ({DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN})"
+            db_cursor.executemany(sql2, qmd_items)
+            
+            if BtnSave['text'] == 'UPDATE':
+                sql_delete = f"DELETE FROM quotation_master WHERE login_id = '{login_id}' AND quotation_id = '{var_quot.get()}'"
+                db_cursor.execute(sql_delete)
+
+            #if BtnSave['text'] == 'SAVE':    
+            sql3 = f"INSERT INTO quotation_master (quotation_id, cust_id, cust_name, provider_name, date_tr_quot, invoice_generated, login_id, terms_conditions) VALUES ({DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN})"
+            db_cursor.execute(sql3, (quotation_id, mid, party_name, provider_name, date_tr_quot, 'N', login_id, '\n'.join(terms_conditions)))
+            db_connection.commit()
+            
+            messagebox.showinfo("Success", "Data saved successfully.",parent=tool_master)
+            BtnSave['text'] = 'Save'
+            txtSaveInfo['text'] = ''
+            if flag:
+                txtSaveInfo['text'] = 'Done'
+                var_quot.set(quotation_id)
+            else:
+                reset_form_quot_unsaved_data()
+            BtnSave['state'] = 'disabled'    
 
     def only_int(new_value):
         return new_value.isdigit() or new_value == ""
@@ -1517,7 +1681,6 @@ def Frm_Tool_Master(master, login_id):
                         pass
                 trv_1History.insert("", 'end', text=str(cnt1), values=(str(i[0]), str(i[4]), str(i[1]), dt1, dt2, all_items))
                 cnt1 += 1
-                
     
     def reset_form_quot_unsaved_data():
         trv.delete(*trv.get_children())
@@ -1548,6 +1711,7 @@ def Frm_Tool_Master(master, login_id):
     tool_master = Toplevel(master)
     tool_master.title("Tool Master")
     tool_master.geometry("1100x680+175+70")
+    tool_master.resizable(False, False)
     tool_master.grab_set()
     s = ttk.Style()
     s.configure('TNotebook.Tab',font=('Times New Roman',14))
@@ -1623,8 +1787,8 @@ def Frm_Tool_Master(master, login_id):
     trv["show"]="headings"
 
     trv.column("no" , width=70, anchor='center')
-    trv.column("part_no" , width=100, anchor='center')
-    trv.column("part_desc" , width=400, anchor='center')
+    trv.column("part_no" , width=300, anchor='center')
+    trv.column("part_desc" , width=200, anchor='center')
     trv.column("qty" , width=100, anchor='center')
     trv.column("unit_price" , width=100, anchor='center')
     trv.column("total_price" , width=100, anchor='center')
@@ -1690,7 +1854,7 @@ def Frm_Tool_Master(master, login_id):
     TxtNo.bind('<Return>', f2)
     TxtPartDesc.bind('<Return>', f3)
     TxtQty.bind('<Return>', f4)
-    On_Start_Tool_Master()
+    
     trv.bind("<Double-1>", show_selected_record)
 
     #=======================================================================================================
@@ -1744,7 +1908,7 @@ def Frm_Tool_Master(master, login_id):
     On_Start_tab2()
     # tool_master_history.mainloop()
     
-    
+    On_Start_Tool_Master()
     enable_esc_close(tool_master)
     tool_master.mainloop()
     return tool_master

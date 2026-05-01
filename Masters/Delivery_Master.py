@@ -386,7 +386,7 @@ def Frm_Delivery_Master(master, login_id):
     frm_delivery = Toplevel(master)
     frm_delivery.title("Challan Report")
     frm_delivery.geometry("950x520+300+170")
-
+    frm_delivery.resizable(False, False)
     notebook = ttk.Notebook(frm_delivery)
     notebook.pack(expand=True, fill="both")
 

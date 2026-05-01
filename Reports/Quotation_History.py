@@ -82,7 +82,7 @@ def Frm_Quotation_Report(master, login_id):
     frm_report = Toplevel(master)
     frm_report.geometry("500x300+480+220")
     frm_report.title("Quotation Report")
-
+    frm_report.resizable(False, False)
     LblHead = Label(frm_report, text='Quotation Report', font=('Times New Roman', 24, 'bold'), fg='purple')
     LblHead.place(x=180, y=10)
 

@@ -64,6 +64,7 @@ def Frm_Account_Master(master, login_id):
         TxtAdd.delete("1.0", END)
         LblPdfPath['text'] = ''
         TxtMasterId['text'] = ''
+        TxtGST.delete(0, END)
         
     def on_start():
         clear_data()
@@ -74,7 +75,7 @@ def Frm_Account_Master(master, login_id):
         cnt = 1
         acc_lst = []
         for i in data1:
-            trv.insert("", 'end', text=i[0], values=(str(cnt), str(i[1]), i[3], str(i[4]), i[0], i[2], i[5]))
+            trv.insert("", 'end', text=i[0], values=(str(cnt), str(i[1]), i[3], str(i[4]), i[0], i[2], i[6], i[5]))
             cnt += 1
             acc_lst.append(i[1])
         BtnSave['text'] = 'Save'
@@ -104,20 +105,20 @@ def Frm_Account_Master(master, login_id):
         addr = TxtAdd.get("1.0", END)
         pdf_path = LblPdfPath1['text']
         master_id = TxtMasterId['text']
-        
-        if len(addr) > 70:
-            messagebox.showerror("Error", "Address should be less characters.", parent = acc_master)
+        gst = TxtGST.get()
+        if len(addr) > 120:
+            messagebox.showerror("Error", "Address should be less than 120 characters.", parent = acc_master)
             return
         
-        if value_exists_in_column(trv, 1, name) and name != '' and contact != '' and providers != '' and BtnSave['text'] == 'Save':
-            sql1 = f"INSERT INTO account_master (party_name, provider_names, contact, address, pdf_path, login_id) VALUES ({DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN})"
-            db_cursor.execute(sql1, (name, providers, contact, addr, pdf_path, login_id))
+        if value_exists_in_column(trv, 1, name) and name != '' and contact != '' and providers != '' and BtnSave['text'] == 'Save' and gst != '':
+            sql1 = f"INSERT INTO account_master (party_name, provider_names, contact, address, pdf_path, login_id, gst_no) VALUES ({DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN}, {DATABASE_SYN})"
+            db_cursor.execute(sql1, (name, providers, contact, addr, pdf_path, login_id, gst))
             db_connection.commit()
             messagebox.showinfo("Success", "Account created successfully.", parent = acc_master)
             on_start()
         elif name != '' and contact != '' and providers != '' and BtnSave['text'] == 'Update':
-            sql2 = f"UPDATE account_master SET party_name = {DATABASE_SYN}, provider_names = {DATABASE_SYN}, contact = {DATABASE_SYN}, address = {DATABASE_SYN}, pdf_path = {DATABASE_SYN} WHERE id = {DATABASE_SYN}"
-            db_cursor.execute(sql2, (name, providers, contact, addr, pdf_path, master_id))
+            sql2 = f"UPDATE account_master SET party_name = {DATABASE_SYN}, provider_names = {DATABASE_SYN}, contact = {DATABASE_SYN}, address = {DATABASE_SYN}, pdf_path = {DATABASE_SYN}, gst_no = {DATABASE_SYN} WHERE id = {DATABASE_SYN}"
+            db_cursor.execute(sql2, (name, providers, contact, addr, pdf_path, gst, master_id))
             db_connection.commit()
             messagebox.showinfo("Success", "Account Updated successfully.", parent = acc_master)
             on_start()
@@ -136,8 +137,10 @@ def Frm_Account_Master(master, login_id):
         TxtProv.insert(0, i1[5])
         TxtContact.insert(0, i1[2])
         TxtAdd.insert("1.0", i1[3])
-        LblPdfPath['text'] = i1[6]
+        LblPdfPath['text'] = i1[7]
         TxtMasterId['text'] = str(i1[4])
+        TxtGST.delete(0, END)
+        TxtGST.insert(0, i1[6])
         
         BtnSave['text'] = 'Update'
     
@@ -156,12 +159,13 @@ def Frm_Account_Master(master, login_id):
     
     acc_master = Toplevel(master)
     acc_master.title("Customer Details")
-    acc_master.geometry("1000x450+225+150")
+    acc_master.geometry("1000x510+225+150")
+    acc_master.resizable(False, False)
     
     LblHead = Label(acc_master, text='Customer Details', font=('Times New Roman',26), fg='blue')
     LblHead.place(x=365,y=5)
     
-    Frm1 = LabelFrame(acc_master, text='Customer Details', font=('Times New Roman',12), width=480, height=370)
+    Frm1 = LabelFrame(acc_master, text='Customer Details', font=('Times New Roman',12), width=480, height=430)
     Frm1.place(x=20, y=60)
     
     LblAcc = Label(Frm1, text='Company Name', font=('Times New Roman',14))
@@ -185,17 +189,22 @@ def Frm_Account_Master(master, login_id):
     TxtAdd = Text(Frm1, font=('Times New Roman',14), width=50, height=2)
     TxtAdd.place(x=12, y=190)
     
+    LblGST = Label(Frm1, text='GST No.', font=('Times New Roman',14))
+    LblGST.place(x=10, y=250)
+    TxtGST = Entry(Frm1, font=('Times New Roman',14), width=30, justify='center')
+    TxtGST.place(x=120, y=250)
+    
     LblPdf = Label(Frm1, text='Select PDF', font=('Times New Roman',14))
-    LblPdf.place(x=10, y=250)
+    LblPdf.place(x=10, y=300)
     BtnAdd = Button(Frm1, text='Choose Pdf File', font=('Times New Roman',12), width=14, command=choose_pdf_path)
-    BtnAdd.place(x=120, y=245)
+    BtnAdd.place(x=120, y=295)
     LblPdfPath = Label(Frm1, text='ishan.pdf', font=('Times New Roman',12))
-    LblPdfPath.place(x=270, y=250)
+    LblPdfPath.place(x=270, y=300)
     LblPdfPath1 = Label(Frm1, text='', font=('Times New Roman',12))
-    LblPdfPath1.place(x=600, y=250)
+    LblPdfPath1.place(x=600, y=300)
     
     Frm2 = LabelFrame(Frm1, text='', font=('Times New Roman',12), width=450, height=50)
-    Frm2.place(x=10, y=285)
+    Frm2.place(x=10, y=335)
     
     BtnNew = Button(Frm2, text='New', font=('Times New Roman',12), width=10, bg='blue', fg='white', command=New_Entry)
     BtnNew.place(x=5, y=5)
@@ -210,8 +219,8 @@ def Frm_Account_Master(master, login_id):
     scrollx=Scrollbar(acc_master , orient=HORIZONTAL)
     
     trv=ttk.Treeview(acc_master , columns=("no" , "company_name" , "contact_no", "Address") , yscrollcommand=scrolly.set , xscrollcommand=scrollx.set)
-    scrolly.place(x=970, y=70, height=360)
-    scrollx.place(x=510, y=430, width=460)
+    scrolly.place(x=970, y=70, height=410)
+    scrollx.place(x=510, y=480, width=460)
     scrolly.config(command=trv.yview)
     scrollx.config(command=trv.xview)
 
@@ -229,7 +238,7 @@ def Frm_Account_Master(master, login_id):
     trv.column("Address" , width=130, anchor='w')
     #trv.column("Provider" , width=100, anchor='center')
     
-    trv.place(x=510, y=70, width=460, height=360)
+    trv.place(x=510, y=70, width=460, height=410)
     
     TxtMasterId = Label(acc_master, text='')
     TxtMasterId.place(x=1500, y=1500)

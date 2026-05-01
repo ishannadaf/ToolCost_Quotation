@@ -1,3 +1,4 @@
+from json import tool
 from tkinter import *
 import tkinter.ttk as ttk
 from tkcalendar import DateEntry
@@ -46,6 +47,7 @@ def Frm_Quot_History(master, login_id):
         if data1 != []:
             name = data1[0][4]
             cnt1 = 1
+            sample = {}
             for i in data1:
                 sql2 = f"SELECT * FROM quotation_master_details WHERE Quotation_Id = {DATABASE_SYN}"
                 db_cursor.execute(sql2, (i[0],))
@@ -57,7 +59,7 @@ def Frm_Quot_History(master, login_id):
                         # db_cursor.execute(sql3, (j[0], j[2], j[17]))
                         # data3 = db_cursor.fetchall()
                         
-                        Company_Name, Company_Address, Company_Contact = Get_Firm_Details()
+                        Company_Name, Company_Contact, Company_Address, email_id = Get_Firm_Details(login_id)
                         sql_basics = f"SELECT * FROM account_master WHERE party_name = {DATABASE_SYN}"
                         db_cursor.execute(sql_basics, (name,))
                         data_basics = db_cursor.fetchall()
@@ -67,7 +69,7 @@ def Frm_Quot_History(master, login_id):
                         cnt = 1
                         for child in data2:
                             items.append({
-                                "no": cnt,
+                                "no": child[2],
                                 "part_desc": child[3],
                                 "qty": int(child[4]),
                                 "unit_price": int(float(child[15])),
@@ -83,7 +85,8 @@ def Frm_Quot_History(master, login_id):
                             "company": {
                                 "name":Company_Name,
                                 "address":Company_Address,
-                                "phone": Company_Contact
+                                "phone": Company_Contact, 
+                                "email": email_id
                             },
                             "date": datetime.today().strftime("%d-%m-%Y"),
                             "quote_no": i[0] if n1 == "Quotation" else i[5],
@@ -101,14 +104,14 @@ def Frm_Quot_History(master, login_id):
                             "terms":i[-1].split("\n")
                         }
 
-                trv_1.insert("", 'end', text=str(cnt1), values=(str(i[0]), str(i[4]), str(i[1]), str(i[2].date()), str(i[3]), sample))
-                cnt1 += 1
+            trv_1.insert("", 'end', text=str(cnt1), values=(str(i[0]), str(i[4]), str(i[1]), str(i[2].date()), str(i[3].date()) if i[3] else str(i[3]), sample))
+            cnt1 += 1
 
-    def Get_Firm_Details():
-        sql1 = f"SELECT firm_name, firm_address, firm_contact FROM firm_master where login_id = {DATABASE_SYN}"
-        db_cursor.execute(sql1, (login_id,))
-        data1 = db_cursor.fetchall()
-        return data1[0][0], data1[0][1], data1[0][2]
+    # def Get_Firm_Details():
+    #     sql1 = f"SELECT firm_name, firm_address, firm_contact,  FROM firm_master where login_id = {DATABASE_SYN}"
+    #     db_cursor.execute(sql1, (login_id,))
+    #     data1 = db_cursor.fetchall()
+    #     return data1[0][0], data1[0][1], data1[0][2]
     
     def show_selected_record(event):
         for selection in trv_1.selection():
@@ -116,10 +119,11 @@ def Frm_Quot_History(master, login_id):
         i1 = item["values"]
         
         sample = i1[-1]
-        print("SAMPLE DATA:", sample)
+        # print("SAMPLE DATA:", sample)
         msg = messagebox.askyesno("Question","You want to open this quotation ?", parent=tool_master_history)
         if msg:
             n1 = TxtSearch.get().upper()
+            
             create_quotation_pdf(sample, r"D:\\ToolCosting\\Support Documents\\Tool_Quotation.pdf", n1, tool_master_history)
             
     def On_Start_tab2():
@@ -137,11 +141,11 @@ def Frm_Quot_History(master, login_id):
         
         
     tool_master_history = Toplevel(master)
-    tool_master_history.title("Quotation Master History")
-    tool_master_history.geometry("900x600+300+150")
-    
-    LblHead = Label(tool_master_history, text='Quotation Master History', font=('Times New Roman', 22, 'bold'), fg='Purple')
-    LblHead.place(x=300, y=10)
+    tool_master_history.title("Search History")
+    tool_master_history.geometry("900x400+300+150")
+    tool_master_history.resizable(False, False)
+    LblHead = Label(tool_master_history, text='Search History', font=('Times New Roman', 22, 'bold'), fg='Purple')
+    LblHead.place(x=330, y=10)
     
     Frm1 = LabelFrame(tool_master_history, text="")
     Frm1.place(x=15, y=80, width=870, height=120)
@@ -172,11 +176,11 @@ def Frm_Quot_History(master, login_id):
     BtnSearch = Button(Frm1, text='Search', font=('Times New Roman', 14), width=16, bg='green', fg='white', command=Search_Records)
     BtnSearch.place(x=670, y=60)
 
-    scrolly=Scrollbar(tool_master_history , orient=VERTICAL)
+    # scrolly=Scrollbar(tool_master_history , orient=VERTICAL)
 
-    trv_1=ttk.Treeview(tool_master_history , columns=("quot_id" , "cust_name" , "prov_name", "date_tr_quot", "date_tr_invoice") , yscrollcommand=scrolly.set )#, xscrollcommand=scrollx.set
-    scrolly.place(x=1070, y=210, height=360)
-    scrolly.config(command=trv_1.yview)
+    trv_1=ttk.Treeview(tool_master_history , columns=("quot_id" , "cust_name" , "prov_name", "date_tr_quot", "date_tr_invoice"))#, xscrollcommand=scrollx.set
+    # scrolly.place(x=1070, y=210, height=160)
+    # scrolly.config(command=trv_1.yview)
 
     trv_1.heading("quot_id" , text="Quotation no")
     trv_1.heading("cust_name" , text="Customer Name")
@@ -194,7 +198,7 @@ def Frm_Quot_History(master, login_id):
     trv_1.column("date_tr_quot" , width=150, anchor='center')
     trv_1.column("date_tr_invoice" , width=150, anchor='center')
 
-    trv_1.place(x=15, y=260, width=870, height=330)
+    trv_1.place(x=15, y=260, width=870, height=130)
     trv_1.bind("<Double-1>", show_selected_record)
     # On_Start_tab2()
     

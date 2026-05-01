@@ -180,7 +180,7 @@ def Frm_Machining_Master(master):
     machining_master = Toplevel(master)
     machining_master.geometry("650x500+430+175")
     machining_master.title("Machining Master")
-
+    machining_master.resizable(False, False)
     Label(machining_master, text='Machining Master', font=('Times New Roman', 22)).place(x=200, y=10)
 
     Frm1 = LabelFrame(machining_master, width=620, height=400)

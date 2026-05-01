@@ -9,6 +9,7 @@ def Frm_Reset_Password(master, login_id):
         TxtCurr.delete(0, END)
         TxtNew.delete(0, END)
         TxtConfirm.delete(0, END)
+        TxtCurr.focus()
         
     def Save_Record():
         n1 = TxtCurr.get()
@@ -28,25 +29,26 @@ def Frm_Reset_Password(master, login_id):
             else:
                 messagebox.showwarning("Warning", "New password and Confirmed password not matched.", parent=frm_password)
 
-    frm_password = Tk()
+    frm_password = Toplevel(master)
     frm_password.geometry("500x350+500+250")
-
+    frm_password.resizable(False, False)
     LblHead = Label(frm_password, text='Reset Password', font=('Times New Roman', 26, 'bold'), fg='red')
     LblHead.place(x=130, y=10)
 
     LblCurr = Label(frm_password, text='Current', font=('Times New Roman', 20))
     LblCurr.place(x=50, y=80)
-    TxtCurr = Entry(frm_password, width=15, font=('Times New Roman', 20))
+    TxtCurr = Entry(frm_password, width=15, font=('Times New Roman', 20), justify="center", show="*")
     TxtCurr.place(x=160, y=80)
+    TxtCurr.focus()
 
     LblNew = Label(frm_password, text='New', font=('Times New Roman', 20))
     LblNew.place(x=50, y=150)
-    TxtNew = Entry(frm_password, width=15, font=('Times New Roman', 20),show="*")
+    TxtNew = Entry(frm_password, width=15, font=('Times New Roman', 20), justify="center", show="*")
     TxtNew.place(x=160, y=150)
 
-    LblConfirm = Label(frm_password, text='New', font=('Times New Roman', 20))
+    LblConfirm = Label(frm_password, text='Confirm', font=('Times New Roman', 20))
     LblConfirm.place(x=50, y=220)
-    TxtConfirm = Entry(frm_password, width=15, font=('Times New Roman', 20),show="*")
+    TxtConfirm = Entry(frm_password, width=15, font=('Times New Roman', 20), justify="center", show="*")
     TxtConfirm.place(x=160, y=220)
 
     BtnSave = Button(frm_password, text='Save', font=('Times New Roman', 14), width=18, bg='green', fg='white', command=Save_Record)
